@@ -136,6 +136,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
         const editor = editorWidget.content.editor;
         const clamped = Math.min(line, editor.lineCount - 1);
         editor.setCursorPosition({ line: clamped, column: 0 });
+        // Focus so the cursor is live (you asked to edit here) and the active
+        // line is rendered, then scroll it into view.
+        editor.focus();
         editor.revealPosition({ line: clamped, column: 0 });
       }
     });
