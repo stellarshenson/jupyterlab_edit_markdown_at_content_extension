@@ -22,25 +22,25 @@ Tasks 6 and 7 interleave (TDD). Task 8 depends on 6 (imports the pure core). Tas
 
 ## File-by-file change map
 
-| Path | Change |
-|------|--------|
-| `jupyterlab_edit_markdown_at_content_extension/routes.py` | DELETE - only the hello route |
-| `jupyterlab_edit_markdown_at_content_extension/__init__.py` | Strip `from .routes import ...`, `_jupyter_server_extension_points()`, `_load_jupyter_server_extension()`. KEEP `_version` import and `_jupyter_labextension_paths()` |
-| `jupyter-config/server-config/jupyterlab_edit_markdown_at_content_extension.json` | DELETE; remove parent `jupyter-config/server-config/` dir |
-| `conftest.py` | DELETE - only the `jp_server_config` fixture |
-| `jupyterlab_edit_markdown_at_content_extension/tests/test_routes.py` | DELETE - hits the removed `/hello` route |
-| `jupyterlab_edit_markdown_at_content_extension/tests/__init__.py` | DELETE; remove `tests/` dir (no python tests remain) |
-| `src/request.ts` | DELETE - `requestAPI` ServerConnection helper |
-| `src/index.ts` | Remove `requestAPI` import + the `requestAPI<any>('hello',...)` block. KEEP exact `console.log('JupyterLab extension jupyterlab_edit_markdown_at_content_extension is activated!')`. Add commands, context-menu items, capture-phase contextmenu listener, DOM block logic, openOrReveal/cursor/scroll |
-| `src/mapping.ts` | NEW - pure source-mapping core (no JupyterLab/DOM imports) |
-| `src/__tests__/mapping.spec.ts` | NEW - Jest fixtures + resolved-line assertions |
-| `src/__tests__/index.spec.ts` | NEW - static-source no-`addFileType` + no-`IDocumentRegistry` regression test |
-| `src/__tests__/jupyterlab_edit_markdown_at_content_extension.spec.ts` | DELETE - boilerplate `1+1` placeholder |
-| `ui-tests/tests/jupyterlab_edit_markdown_at_content_extension.spec.ts` | EXTEND - keep activation test verbatim; add Flow 1, Flow 2, two negative tests |
-| `package.json` | Remove `jupyterlab.discovery.server`; remove `@jupyterlab/services`; add deps (below) |
-| `pyproject.toml` | Remove server-config shared-data line (26); remove `jupyter_server` dependency (55) |
-| `jest.config.js` | NO CHANGE - `testRegex` already matches new specs |
-| `ui-tests/playwright.config.js` | NO CHANGE |
+| Path                                                                              | Change                                                                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `jupyterlab_edit_markdown_at_content_extension/routes.py`                         | DELETE - only the hello route                                                                                                                                                                                                                                                                          |
+| `jupyterlab_edit_markdown_at_content_extension/__init__.py`                       | Strip `from .routes import ...`, `_jupyter_server_extension_points()`, `_load_jupyter_server_extension()`. KEEP `_version` import and `_jupyter_labextension_paths()`                                                                                                                                  |
+| `jupyter-config/server-config/jupyterlab_edit_markdown_at_content_extension.json` | DELETE; remove parent `jupyter-config/server-config/` dir                                                                                                                                                                                                                                              |
+| `conftest.py`                                                                     | DELETE - only the `jp_server_config` fixture                                                                                                                                                                                                                                                           |
+| `jupyterlab_edit_markdown_at_content_extension/tests/test_routes.py`              | DELETE - hits the removed `/hello` route                                                                                                                                                                                                                                                               |
+| `jupyterlab_edit_markdown_at_content_extension/tests/__init__.py`                 | DELETE; remove `tests/` dir (no python tests remain)                                                                                                                                                                                                                                                   |
+| `src/request.ts`                                                                  | DELETE - `requestAPI` ServerConnection helper                                                                                                                                                                                                                                                          |
+| `src/index.ts`                                                                    | Remove `requestAPI` import + the `requestAPI<any>('hello',...)` block. KEEP exact `console.log('JupyterLab extension jupyterlab_edit_markdown_at_content_extension is activated!')`. Add commands, context-menu items, capture-phase contextmenu listener, DOM block logic, openOrReveal/cursor/scroll |
+| `src/mapping.ts`                                                                  | NEW - pure source-mapping core (no JupyterLab/DOM imports)                                                                                                                                                                                                                                             |
+| `src/__tests__/mapping.spec.ts`                                                   | NEW - Jest fixtures + resolved-line assertions                                                                                                                                                                                                                                                         |
+| `src/__tests__/index.spec.ts`                                                     | NEW - static-source no-`addFileType` + no-`IDocumentRegistry` regression test                                                                                                                                                                                                                          |
+| `src/__tests__/jupyterlab_edit_markdown_at_content_extension.spec.ts`             | DELETE - boilerplate `1+1` placeholder                                                                                                                                                                                                                                                                 |
+| `ui-tests/tests/jupyterlab_edit_markdown_at_content_extension.spec.ts`            | EXTEND - keep activation test verbatim; add Flow 1, Flow 2, two negative tests                                                                                                                                                                                                                         |
+| `package.json`                                                                    | Remove `jupyterlab.discovery.server`; remove `@jupyterlab/services`; add deps (below)                                                                                                                                                                                                                  |
+| `pyproject.toml`                                                                  | Remove server-config shared-data line (26); remove `jupyter_server` dependency (55)                                                                                                                                                                                                                    |
+| `jest.config.js`                                                                  | NO CHANGE - `testRegex` already matches new specs                                                                                                                                                                                                                                                      |
+| `ui-tests/playwright.config.js`                                                   | NO CHANGE                                                                                                                                                                                                                                                                                              |
 
 ## Source-mapping core - public module breakdown (`src/mapping.ts`)
 
@@ -51,16 +51,16 @@ The line accumulator MUST replicate core's exact algorithm (`@jupyterlab/markedp
 ```typescript
 /** One rendered top-level block, ordinal-aligned to host.children. */
 export interface BlockDescriptor {
-  ordinal: number;        // index into the DOM-correlated list == host.children index
-  startLine: number;      // 0-based first source line of the block
-  endLine: number;        // 0-based last source line of the block
-  type: string;           // marked token type (heading, paragraph, code, list, table, ...)
-  text: string;           // normalized block text, for empty-block guard (AC #5)
-  headingSlug?: string;   // present only for heading tokens: createHeaderId form
+  ordinal: number; // index into the DOM-correlated list == host.children index
+  startLine: number; // 0-based first source line of the block
+  endLine: number; // 0-based last source line of the block
+  type: string; // marked token type (heading, paragraph, code, list, table, ...)
+  text: string; // normalized block text, for empty-block guard (AC #5)
+  headingSlug?: string; // present only for heading tokens: createHeaderId form
 }
 
 export interface BlockMap {
-  blocks: BlockDescriptor[];  // rendered (non-space/def/comment) tokens, in DOM order
+  blocks: BlockDescriptor[]; // rendered (non-space/def/comment) tokens, in DOM order
   headings: { line: number; slug: string; ordinal: number }[]; // for nearest-preceding fallback
 }
 
@@ -91,6 +91,7 @@ export function headingSlug(headingText: string): string;
 ## package.json dependency changes
 
 **Remove**:
+
 - `@jupyterlab/services` (only used by `request.ts`)
 - the `jupyterlab.discovery.server` metadata block
 - `@jupyterlab/coreutils` only if `grep -r 'URLExt\|PathExt' src/` finds no remaining use; otherwise keep
@@ -118,41 +119,49 @@ Two commands on `app.commands`, two items on `app.contextMenu` scoped by tighten
 > The Preview selector MUST be scoped to the MarkdownViewer document, not bare `.jp-RenderedMarkdown` - that class also applies to rendered markdown CELLS inside notebooks and rendered markdown OUTPUTS, which would surface the item on non-preview surfaces and violate AC #1. Confirm the actual MarkdownViewer container class during the spike (`.jp-MarkdownViewer` wraps the preview's rendered host); use `.jp-MarkdownViewer .jp-RenderedMarkdown`.
 
 ```typescript
-const CMD_EDIT_AT   = 'editmarkdownatcontent:edit-at-location';
+const CMD_EDIT_AT = 'editmarkdownatcontent:edit-at-location';
 const CMD_REVEAL_IN = 'editmarkdownatcontent:reveal-in-preview';
 
 // Preview -> Editor
 app.commands.addCommand(CMD_EDIT_AT, {
   label: 'Edit at this location',
-  execute: () => { /* use stashed _lastPreviewTarget; resolve owning MarkdownDocument via
-                      IMarkdownViewerTracker; ordinal -> blockToLine -> openOrReveal('Editor') */ }
+  execute: () => {
+    /* use stashed _lastPreviewTarget; resolve owning MarkdownDocument via
+                      IMarkdownViewerTracker; ordinal -> blockToLine -> openOrReveal('Editor') */
+  }
 });
 app.contextMenu.addItem({
   command: CMD_EDIT_AT,
-  selector: '.jp-MarkdownViewer .jp-RenderedMarkdown',   // preview document surface ONLY (AC #1)
+  selector: '.jp-MarkdownViewer .jp-RenderedMarkdown', // preview document surface ONLY (AC #1)
   rank: 0
 });
 
 // Editor -> Preview
 app.commands.addCommand(CMD_REVEAL_IN, {
   label: 'Reveal in Markdown Preview',
-  execute: () => { /* resolve owning FileEditor via stashed _lastEditorTarget + IEditorTracker;
-                      getCursorPosition -> lineToBlock -> openOrReveal('Markdown Preview') -> scroll */ }
+  execute: () => {
+    /* resolve owning FileEditor via stashed _lastEditorTarget + IEditorTracker;
+                      getCursorPosition -> lineToBlock -> openOrReveal('Markdown Preview') -> scroll */
+  }
 });
 app.contextMenu.addItem({
   command: CMD_REVEAL_IN,
-  selector: '.jp-FileEditor',         // file editor surface only (AC #6)
+  selector: '.jp-FileEditor', // file editor surface only (AC #6)
   rank: 0
 });
 
 // Single capture-phase listener stashing BOTH targets (no DOM target reaches the command)
-document.addEventListener('contextmenu', (e) => {
-  const t = e.target as Element;
-  const prev = t.closest?.('.jp-MarkdownViewer .jp-RenderedMarkdown');
-  const edit = t.closest?.('.jp-FileEditor');
-  this._lastPreviewTarget = prev ? t : null;
-  this._lastEditorTarget  = edit ? t : null;
-}, true);
+document.addEventListener(
+  'contextmenu',
+  e => {
+    const t = e.target as Element;
+    const prev = t.closest?.('.jp-MarkdownViewer .jp-RenderedMarkdown');
+    const edit = t.closest?.('.jp-FileEditor');
+    this._lastPreviewTarget = prev ? t : null;
+    this._lastEditorTarget = edit ? t : null;
+  },
+  true
+);
 ```
 
 Plugin `requires`: `IDocumentManager`, `IEditorTracker`, `IMarkdownViewerTracker`. Factory name strings are exact: `'Editor'` (fileeditor) and `'Markdown Preview'` (markdownviewer).
@@ -191,45 +200,44 @@ Pass = lengths match and scroll targets are correct on the plain set; the exotic
 
 ## Risks and mitigations
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| Ordinal drift: space/def/comment tokens shift every later DOM index | high | Exclude `space`/`def`/comment-only `html` from the DOM list but keep them in the line walk; runtime self-check `domBlockList.length === expectedTokenCount`; on mismatch drop to heading fallback |
-| Math `removeMath`/`replaceMath` re-tokenizes `$$` differently than plain re-lex, shifting ordinals | medium | Spike includes math fixture; length self-check catches it; math-bearing docs are fallback-only, documented in limitations |
-| Sanitizer node removal / script-warning node prepended at index 0 shifts ordinals | medium | Length self-check catches the off-by-N; routes to heading fallback; spike exercises an untrusted `<script>` doc |
-| Off-by-one line accumulation (blank lines live in `space`/`raw`) | high | Replicate core accumulator verbatim: `currentLine += token.raw.split('\n').length - 1` per top-level token, record `startLine` before advancing; Jest fixture asserts paragraph startLine after a multi-line fenced code block |
-| `marked` version skew vs core's bundled parser for exotic constructs | medium | Pin `marked` caret to installed patch `^17.0.6`; lex with explicit `{ gfm: true }`; spike validates GFM tables + fenced code; exotic tokens fall through to heading fallback |
-| Selector `.jp-RenderedMarkdown` over-matches notebook markdown cells/outputs → item on non-preview surface | high | Scope selector to `.jp-MarkdownViewer .jp-RenderedMarkdown`; execute also no-ops if owning widget not found in `IMarkdownViewerTracker`; Galata negative test on a rendered notebook markdown cell |
-| Lumino commands receive no DOM target | medium | Single capture-phase `contextmenu` listener stashes `_lastPreviewTarget` and `_lastEditorTarget`; read in execute |
-| Editor→Preview resolves wrong widget via `currentWidget` (split/unfocused editors) | medium | Stash right-clicked `.jp-FileEditor` node; resolve owning widget via `IEditorTracker` + `node.contains(target)`; `currentWidget` only as last-resort fallback |
-| Heading-anchor fallback uses `#id` but untrusted sanitizer emits `data-jupyter-id` | high | Re-derive `createHeaderId(textContent)` from live `h1`-`h6` elements and select the `headingNth`-th match; do not trust any single id attribute |
-| Cursor positioning runs before editor renders (async open) | medium | `await widget.context.ready; await widget.revealed;` before `setCursorPosition`/`revealPosition`; clamp to `editor.lineCount - 1` |
-| Removing `_jupyter_labextension_paths()` breaks prebuilt discovery | high | Strip ONLY the server functions; explicitly preserve `_jupyter_labextension_paths` and `_version` import |
-| Leaving server-config shared-data line after deleting the JSON breaks the build | high | Remove that shared-data line in the same change as the JSON delete |
-| Heading-slug collisions (two `## Notes`) reveal wrong occurrence | medium | `lineToBlock` returns `headingNth`; fallback selects the Nth matching heading in document order, not the first |
-| Empty/marker-only block (hr, image-only, empty li) yields a blank-ish jump | low | `BlockDescriptor.text` empty-guard: `blockToLine` returns `-1` for empty normalized text → no-op + console.warn (AC #5) |
-| Source edited since last render → containment lookup fails | low | Re-read `context.model.toString()` at trigger time; treat failed lookup as a clean no-op, never a relocated text jump |
-| Two new deps absent from `node_modules` → registry fetch | low | Acknowledged in Task 4/5; after `make install` confirm resolved versions on 4.5.x line and `.d.ts` match cited API before coding `index.ts` |
-| Galata not installed in `ui-tests/node_modules` | medium | Run `jlpm install` under `ui-tests/` or rely on CI's playwright job; API names verified against installed sibling galata 5.x |
+| Risk                                                                                                       | Severity | Mitigation                                                                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Ordinal drift: space/def/comment tokens shift every later DOM index                                        | high     | Exclude `space`/`def`/comment-only `html` from the DOM list but keep them in the line walk; runtime self-check `domBlockList.length === expectedTokenCount`; on mismatch drop to heading fallback                              |
+| Math `removeMath`/`replaceMath` re-tokenizes `$$` differently than plain re-lex, shifting ordinals         | medium   | Spike includes math fixture; length self-check catches it; math-bearing docs are fallback-only, documented in limitations                                                                                                      |
+| Sanitizer node removal / script-warning node prepended at index 0 shifts ordinals                          | medium   | Length self-check catches the off-by-N; routes to heading fallback; spike exercises an untrusted `<script>` doc                                                                                                                |
+| Off-by-one line accumulation (blank lines live in `space`/`raw`)                                           | high     | Replicate core accumulator verbatim: `currentLine += token.raw.split('\n').length - 1` per top-level token, record `startLine` before advancing; Jest fixture asserts paragraph startLine after a multi-line fenced code block |
+| `marked` version skew vs core's bundled parser for exotic constructs                                       | medium   | Pin `marked` caret to installed patch `^17.0.6`; lex with explicit `{ gfm: true }`; spike validates GFM tables + fenced code; exotic tokens fall through to heading fallback                                                   |
+| Selector `.jp-RenderedMarkdown` over-matches notebook markdown cells/outputs → item on non-preview surface | high     | Scope selector to `.jp-MarkdownViewer .jp-RenderedMarkdown`; execute also no-ops if owning widget not found in `IMarkdownViewerTracker`; Galata negative test on a rendered notebook markdown cell                             |
+| Lumino commands receive no DOM target                                                                      | medium   | Single capture-phase `contextmenu` listener stashes `_lastPreviewTarget` and `_lastEditorTarget`; read in execute                                                                                                              |
+| Editor→Preview resolves wrong widget via `currentWidget` (split/unfocused editors)                         | medium   | Stash right-clicked `.jp-FileEditor` node; resolve owning widget via `IEditorTracker` + `node.contains(target)`; `currentWidget` only as last-resort fallback                                                                  |
+| Heading-anchor fallback uses `#id` but untrusted sanitizer emits `data-jupyter-id`                         | high     | Re-derive `createHeaderId(textContent)` from live `h1`-`h6` elements and select the `headingNth`-th match; do not trust any single id attribute                                                                                |
+| Cursor positioning runs before editor renders (async open)                                                 | medium   | `await widget.context.ready; await widget.revealed;` before `setCursorPosition`/`revealPosition`; clamp to `editor.lineCount - 1`                                                                                              |
+| Removing `_jupyter_labextension_paths()` breaks prebuilt discovery                                         | high     | Strip ONLY the server functions; explicitly preserve `_jupyter_labextension_paths` and `_version` import                                                                                                                       |
+| Leaving server-config shared-data line after deleting the JSON breaks the build                            | high     | Remove that shared-data line in the same change as the JSON delete                                                                                                                                                             |
+| Heading-slug collisions (two `## Notes`) reveal wrong occurrence                                           | medium   | `lineToBlock` returns `headingNth`; fallback selects the Nth matching heading in document order, not the first                                                                                                                 |
+| Empty/marker-only block (hr, image-only, empty li) yields a blank-ish jump                                 | low      | `BlockDescriptor.text` empty-guard: `blockToLine` returns `-1` for empty normalized text → no-op + console.warn (AC #5)                                                                                                        |
+| Source edited since last render → containment lookup fails                                                 | low      | Re-read `context.model.toString()` at trigger time; treat failed lookup as a clean no-op, never a relocated text jump                                                                                                          |
+| Two new deps absent from `node_modules` → registry fetch                                                   | low      | Acknowledged in Task 4/5; after `make install` confirm resolved versions on 4.5.x line and `.d.ts` match cited API before coding `index.ts`                                                                                    |
+| Galata not installed in `ui-tests/node_modules`                                                            | medium   | Run `jlpm install` under `ui-tests/` or rely on CI's playwright job; API names verified against installed sibling galata 5.x                                                                                                   |
 
 ## Acceptance criteria coverage (task → criterion)
 
-| AC | How satisfied | Task(s) |
-|----|----------------|---------|
-| 1 - "Edit at this location" only on preview surface | `app.contextMenu.addItem` selector `.jp-MarkdownViewer .jp-RenderedMarkdown`; execute no-ops if owning widget not in `IMarkdownViewerTracker`; Galata negative assertion on a RENDERED notebook markdown cell | 8, 10 |
-| 2 - opens/reveals file with `Editor` factory | `docManager.openOrReveal(path, 'Editor')` (reveals existing tab or opens new) | 8 |
-| 3 - cursor on source line, scrolled into view | `editor.setCursorPosition({line,0})` + `editor.revealPosition` after `ready`/`revealed`, clamped to `lineCount - 1` | 8 |
-| 4 - correct block for well-formed markdown | `blockToLine` ordinal map with verbatim core accumulator; line within block `[startLine,endLine]`; Jest well-formed fixture | 6, 7 |
-| 5 - no-op + console.warn on unmappable | `blockToLine` returns `-1` for out-of-range ordinal or empty block text; owning-widget no-op; console.warn path | 6, 8 |
-| 6 - "Reveal in Markdown Preview" on editor, scrolls preview to cursor block | `.jp-FileEditor` selector; right-clicked editor resolved via stash + `IEditorTracker`; `getCursorPosition` → `lineToBlock` → `host.children[ordinal].scrollIntoView` | 8 |
-| 7 - opens a preview if none open, then scrolls | `docManager.openOrReveal(path, 'Markdown Preview')` then await `ready`/`revealed` + scroll | 8 |
-| 8 - block in viewport; heading anchors as fallback | `scrollIntoView`; on length-mismatch/no-block, re-derive `createHeaderId` from live `h1`-`h6` and select `headingNth`-th match | 6, 8 |
-| 9 - exact activation console message | Preserve verbatim `console.log(...)` in `index.ts`; activation Galata test kept verbatim | 8, 10 |
-| 10 - no `addFileType` | Static-source Jest test reading `index.ts` for `addFileType` absence; assert plugin descriptor omits `IDocumentRegistry` | 9 |
-| 11 - mapping < ~2000 lines no perceptible delay | Single `marked.lexer(source, {gfm:true})` pass per trigger, pure integer ordinal lookup; no cache invalidation | 6 |
-| 12 - `make install` + labextension `OK` | Preserve labextension shared-data + builder hooks in `pyproject.toml`/`__init__.py`; verify after install | 2, 3, 5, 11 |
+| AC                                                                          | How satisfied                                                                                                                                                                                                 | Task(s)     |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1 - "Edit at this location" only on preview surface                         | `app.contextMenu.addItem` selector `.jp-MarkdownViewer .jp-RenderedMarkdown`; execute no-ops if owning widget not in `IMarkdownViewerTracker`; Galata negative assertion on a RENDERED notebook markdown cell | 8, 10       |
+| 2 - opens/reveals file with `Editor` factory                                | `docManager.openOrReveal(path, 'Editor')` (reveals existing tab or opens new)                                                                                                                                 | 8           |
+| 3 - cursor on source line, scrolled into view                               | `editor.setCursorPosition({line,0})` + `editor.revealPosition` after `ready`/`revealed`, clamped to `lineCount - 1`                                                                                           | 8           |
+| 4 - correct block for well-formed markdown                                  | `blockToLine` ordinal map with verbatim core accumulator; line within block `[startLine,endLine]`; Jest well-formed fixture                                                                                   | 6, 7        |
+| 5 - no-op + console.warn on unmappable                                      | `blockToLine` returns `-1` for out-of-range ordinal or empty block text; owning-widget no-op; console.warn path                                                                                               | 6, 8        |
+| 6 - "Reveal in Markdown Preview" on editor, scrolls preview to cursor block | `.jp-FileEditor` selector; right-clicked editor resolved via stash + `IEditorTracker`; `getCursorPosition` → `lineToBlock` → `host.children[ordinal].scrollIntoView`                                          | 8           |
+| 7 - opens a preview if none open, then scrolls                              | `docManager.openOrReveal(path, 'Markdown Preview')` then await `ready`/`revealed` + scroll                                                                                                                    | 8           |
+| 8 - block in viewport; heading anchors as fallback                          | `scrollIntoView`; on length-mismatch/no-block, re-derive `createHeaderId` from live `h1`-`h6` and select `headingNth`-th match                                                                                | 6, 8        |
+| 9 - exact activation console message                                        | Preserve verbatim `console.log(...)` in `index.ts`; activation Galata test kept verbatim                                                                                                                      | 8, 10       |
+| 10 - no `addFileType`                                                       | Static-source Jest test reading `index.ts` for `addFileType` absence; assert plugin descriptor omits `IDocumentRegistry`                                                                                      | 9           |
+| 11 - mapping < ~2000 lines no perceptible delay                             | Single `marked.lexer(source, {gfm:true})` pass per trigger, pure integer ordinal lookup; no cache invalidation                                                                                                | 6           |
+| 12 - `make install` + labextension `OK`                                     | Preserve labextension shared-data + builder hooks in `pyproject.toml`/`__init__.py`; verify after install                                                                                                     | 2, 3, 5, 11 |
 
 Files referenced are all under `/home/lab/workspace/private/jupyterlab/jupyterlab_edit_markdown_at_content_extension/`. The mapping core lives at `src/mapping.ts` (NEW), the plugin at `src/index.ts`, tests at `src/__tests__/mapping.spec.ts` (NEW), `src/__tests__/index.spec.ts` (NEW), and `ui-tests/tests/jupyterlab_edit_markdown_at_content_extension.spec.ts` (EXTEND).
-
 
 ## Open questions surfaced during research
 

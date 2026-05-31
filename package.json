@@ -56,9 +56,13 @@
         "watch:labextension": "jupyter labextension watch ."
     },
     "dependencies": {
-        "@jupyterlab/application": "^4.0.0",
-        "@jupyterlab/coreutils": "^6.0.0",
-        "@jupyterlab/services": "^7.0.0"
+        "@jupyterlab/application": "^4.5.0",
+        "@jupyterlab/codeeditor": "^4.5.0",
+        "@jupyterlab/docmanager": "^4.5.0",
+        "@jupyterlab/docregistry": "^4.5.0",
+        "@jupyterlab/fileeditor": "^4.5.0",
+        "@jupyterlab/markdownviewer": "^4.5.0",
+        "marked": "^17.0.0"
     },
     "devDependencies": {
         "@jupyterlab/builder": "^4.0.0",
@@ -85,11 +89,17 @@
         "stylelint-config-standard": "^34.0.0",
         "stylelint-csstree-validator": "^3.0.0",
         "stylelint-prettier": "^4.0.0",
-        "typescript": "~5.5.4",
+        "typescript": "~5.8.0",
         "yjs": "^13.5.0"
     },
     "resolutions": {
-        "lib0": "0.2.111"
+        "lib0": "0.2.111",
+        "webpack": "5.106.0",
+        "chalk": "4.1.2"
+    },
+    "overrides": {
+        "webpack": "5.106.0",
+        "chalk": "4.1.2"
     },
     "sideEffects": [
         "style/*.css",
@@ -100,16 +110,6 @@
         "access": "public"
     },
     "jupyterlab": {
-        "discovery": {
-            "server": {
-                "managers": [
-                    "pip"
-                ],
-                "base": {
-                    "name": "jupyterlab_edit_markdown_at_content_extension"
-                }
-            }
-        },
         "extension": true,
         "outputDir": "jupyterlab_edit_markdown_at_content_extension/labextension"
     },

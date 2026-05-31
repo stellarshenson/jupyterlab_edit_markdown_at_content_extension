@@ -5,6 +5,7 @@ const esModules = [
   '@jupyter/ydoc',
   '@jupyterlab/',
   'lib0',
+  'marked',
   'nanoid',
   'vscode-ws-jsonrpc',
   'y-protocols',

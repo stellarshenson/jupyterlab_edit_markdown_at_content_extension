@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="14" failures="0" errors="0" time="2.843">
+  <testsuite name="index - registry hygiene (AC #10)" errors="0" failures="0" skipped="0" timestamp="2026-05-31T22:19:06" time="1.045" tests="3">
+    <testcase classname="index - registry hygiene (AC #10) does not call docRegistry.addFileType (must not override icons)" name="index - registry hygiene (AC #10) does not call docRegistry.addFileType (must not override icons)" time="0.002">
+    </testcase>
+    <testcase classname="index - registry hygiene (AC #10) does not depend on IDocumentRegistry" name="index - registry hygiene (AC #10) does not depend on IDocumentRegistry" time="0">
+    </testcase>
+    <testcase classname="index - activation message (AC #9) logs the exact activation message the UI test expects" name="index - activation message (AC #9) logs the exact activation message the UI test expects" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="mapping - buildBlockMap" errors="0" failures="0" skipped="0" timestamp="2026-05-31T22:19:06" time="1.94" tests="11">
+    <testcase classname="mapping - buildBlockMap orders blocks and starts the first block at line 0" name="mapping - buildBlockMap orders blocks and starts the first block at line 0" time="0.009">
+    </testcase>
+    <testcase classname="mapping - cumulative line arithmetic across a fenced code block lands each block on its true source line (verifies the accumulator)" name="mapping - cumulative line arithmetic across a fenced code block lands each block on its true source line (verifies the accumulator)" time="0.002">
+    </testcase>
+    <testcase classname="mapping - cumulative line arithmetic across a fenced code block round-trips line -&gt; block -&gt; line for the trailing paragraph" name="mapping - cumulative line arithmetic across a fenced code block round-trips line -&gt; block -&gt; line for the trailing paragraph" time="0">
+    </testcase>
+    <testcase classname="mapping - cumulative line arithmetic across a fenced code block maps a line inside the code fence to the code block + preceding heading" name="mapping - cumulative line arithmetic across a fenced code block maps a line inside the code fence to the code block + preceding heading" time="0.001">
+    </testcase>
+    <testcase classname="mapping - duplicate adjacent paragraphs (position, not content) resolves identical paragraphs to distinct ordinals and lines" name="mapping - duplicate adjacent paragraphs (position, not content) resolves identical paragraphs to distinct ordinals and lines" time="0">
+    </testcase>
+    <testcase classname="mapping - empty/marker-only blocks guard (AC #5) returns -1 for a horizontal rule block" name="mapping - empty/marker-only blocks guard (AC #5) returns -1 for a horizontal rule block" time="0.001">
+    </testcase>
+    <testcase classname="mapping - empty/marker-only blocks guard (AC #5) returns -1 for an out-of-range ordinal" name="mapping - empty/marker-only blocks guard (AC #5) returns -1 for an out-of-range ordinal" time="0">
+    </testcase>
+    <testcase classname="mapping - nested list is a single top-level block treats the whole list as one ordinal" name="mapping - nested list is a single top-level block treats the whole list as one ordinal" time="0.001">
+    </testcase>
+    <testcase classname="mapping - GFM table is a single top-level block treats the table as one ordinal at line 0" name="mapping - GFM table is a single top-level block treats the table as one ordinal at line 0" time="0.001">
+    </testcase>
+    <testcase classname="mapping - headingSlug replaces spaces with hyphens on plain text" name="mapping - headingSlug replaces spaces with hyphens on plain text" time="0">
+    </testcase>
+    <testcase classname="mapping - headingSlug strips inline markdown before slugging" name="mapping - headingSlug strips inline markdown before slugging" time="0">
+    </testcase>
+  </testsuite>
+</testsuites>

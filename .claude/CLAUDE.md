@@ -38,6 +38,7 @@ and a frontend NPM package of the same name. Scaffolded from the JupyterLab exte
 template (see `.copier-answers.yml`).
 
 **Technology Stack**:
+
 - TypeScript frontend against `@jupyterlab/application` (JupyterLab >= 4.0.0)
 - Python `jupyter_server` extension for server-side routes
 - jupyter-releaser CI/CD via the `.github/workflows/` pipelines

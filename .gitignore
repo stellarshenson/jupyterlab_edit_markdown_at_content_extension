@@ -126,3 +126,11 @@ dmypy.json
 
 # Yarn cache
 .yarn/
+
+# project-local node environment (Makefile)
+.nodeenv/
+
+# test artifacts
+junit.xml
+ui-tests/test-results/
+ui-tests/playwright-report/
