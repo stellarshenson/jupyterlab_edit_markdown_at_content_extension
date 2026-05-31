@@ -61,6 +61,9 @@ test.describe('edit-at-content flows', () => {
   test('Flow 1: Preview -> Editor lands the cursor on the clicked block', async ({
     page
   }) => {
+    const logs: string[] = [];
+    page.on('console', m => logs.push(m.text()));
+
     await page.goto();
     await writeAndOpen(page, 'Markdown Preview');
 
@@ -73,9 +76,21 @@ test.describe('edit-at-content flows', () => {
       .locator('.lm-Menu-itemLabel:has-text("Edit at this location")')
       .click();
 
-    // The editor opens and its active (cursor) line is the source line 6.
+    // Diagnose: did the editor open at all?
+    try {
+      await page.locator('.jp-FileEditor').waitFor({ timeout: 20000 });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(
+        'EXT_LOGS:\n' +
+          logs.filter(s => s.includes('edit-markdown-at-content')).join('\n')
+      );
+      throw e;
+    }
+
+    // The editor opened; assert the cursor line via the rendered active line.
     const activeLine = page.locator('.jp-FileEditor .cm-activeLine');
-    await activeLine.waitFor();
+    await activeLine.waitFor({ timeout: 20000 });
     await expect(activeLine).toHaveText('Final paragraph here.');
   });
 
