@@ -61,9 +61,6 @@ test.describe('edit-at-content flows', () => {
   test('Flow 1: Preview -> Editor lands the cursor on the clicked block', async ({
     page
   }) => {
-    const logs: string[] = [];
-    page.on('console', m => logs.push(m.text()));
-
     await page.goto();
     await writeAndOpen(page, 'Markdown Preview');
 
@@ -76,22 +73,25 @@ test.describe('edit-at-content flows', () => {
       .locator('.lm-Menu-itemLabel:has-text("Edit at this location")')
       .click();
 
-    // Diagnose: did the editor open at all?
-    try {
-      await page.locator('.jp-FileEditor').waitFor({ timeout: 20000 });
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.log(
-        'EXT_LOGS:\n' +
-          logs.filter(s => s.includes('edit-markdown-at-content')).join('\n')
-      );
-      throw e;
-    }
+    // AC #2: the editor opens.
+    await page.locator('.jp-FileEditor').waitFor({ timeout: 30000 });
 
-    // The editor opened; assert the cursor line via the rendered active line.
-    const activeLine = page.locator('.jp-FileEditor .cm-activeLine');
-    await activeLine.waitFor({ timeout: 20000 });
-    await expect(activeLine).toHaveText('Final paragraph here.');
+    // AC #3: the cursor lands on the clicked block's source line (line 6,
+    // 0-based: "Final paragraph here."). Read it from the editor API rather
+    // than a focus-dependent DOM class.
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => {
+            const w = (window as any).jupyterapp.shell.currentWidget;
+            const ed = w && w.content && w.content.editor;
+            return ed && ed.getCursorPosition
+              ? ed.getCursorPosition().line
+              : -1;
+          }),
+        { timeout: 15000 }
+      )
+      .toBe(6);
   });
 
   test('Flow 2: Editor -> Preview scrolls the matching block into view', async ({
