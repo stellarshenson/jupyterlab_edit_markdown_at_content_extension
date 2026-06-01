@@ -4,3 +4,5 @@ node_modules
 **/package.json
 !/package.json
 jupyterlab_edit_markdown_at_content_extension
+
+.claude
