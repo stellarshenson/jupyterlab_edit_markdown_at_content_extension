@@ -109,8 +109,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
     }
 
     // Lumino commands receive no DOM target, so a single capture-phase
-    // listener stashes the right-clicked node for both directions.
+    // listener stashes the right-clicked node for both directions. The click Y
+    // is kept too, so a click on empty space (the host itself, between blocks
+    // or in a line's right-hand whitespace) can resolve to the nearest block.
     let lastPreviewTarget: Element | null = null;
+    let lastPreviewY = 0;
     let lastEditorTarget: Element | null = null;
 
     document.addEventListener(
@@ -118,6 +121,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       (event: MouseEvent) => {
         const target = event.target as Element | null;
         lastPreviewTarget = target?.closest?.(PREVIEW_SELECTOR) ? target : null;
+        lastPreviewY = event.clientY;
         lastEditorTarget = target?.closest?.(EDITOR_SELECTOR) ? target : null;
       },
       true
@@ -148,6 +152,27 @@ const plugin: JupyterFrontEndPlugin<void> = {
     /** The `.jp-RenderedMarkdown` host element inside a preview/editor widget. */
     const renderedHost = (widget: any): HTMLElement | null =>
       widget?.node?.querySelector('.jp-RenderedMarkdown') ?? null;
+
+    /**
+     * 0-based index of the host child nearest the click `y`. Distance is to the
+     * child's vertical band, so a click inside a block returns that block and a
+     * click in a gap returns the closer of the two neighbours. Returns -1 when
+     * the host has no children.
+     */
+    const nearestChildOrdinal = (host: HTMLElement, y: number): number => {
+      const kids = Array.from(host.children);
+      let best = -1;
+      let bestDist = Infinity;
+      for (let i = 0; i < kids.length; i++) {
+        const r = kids[i].getBoundingClientRect();
+        const d = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+        if (d < bestDist) {
+          bestDist = d;
+          best = i;
+        }
+      }
+      return best;
+    };
 
     /** 0-based index of the first preview block whose bottom is below the host top. */
     const previewTopOrdinal = (host: HTMLElement): number => {
@@ -294,22 +319,31 @@ const plugin: JupyterFrontEndPlugin<void> = {
           console.warn(`${LOG} could not resolve the owning Markdown Preview`);
           return;
         }
-        const host = renderedHost(widget);
+        // Resolve the host from the target's own rendered ancestor (closest
+        // includes the target itself), so a click on the host element resolves
+        // the same host rather than the widget's first matching node.
+        const host =
+          (target.closest('.jp-RenderedMarkdown') as HTMLElement | null) ??
+          renderedHost(widget);
         if (!host) {
           console.warn(`${LOG} rendered host not found`);
           return;
         }
 
-        // Walk up to the top-level block (direct child of the host).
+        // Walk up to the top-level block (direct child of the host). When the
+        // click landed on the host itself (empty space between or beside
+        // blocks), fall back to the block nearest the click Y.
         let block: Element | null = target;
         while (block && block.parentElement !== host) {
           block = block.parentElement;
         }
-        if (!block) {
+        const ordinal = block
+          ? Array.from(host.children).indexOf(block)
+          : nearestChildOrdinal(host, lastPreviewY);
+        if (ordinal < 0) {
           console.warn(`${LOG} clicked content is not a rendered block`);
           return;
         }
-        const ordinal = Array.from(host.children).indexOf(block);
         const source: string = widget.context.model.toString();
         const line = blockToLine(source, ordinal);
         if (line < 0) {

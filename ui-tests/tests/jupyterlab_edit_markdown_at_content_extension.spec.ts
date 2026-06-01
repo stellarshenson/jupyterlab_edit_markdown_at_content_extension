@@ -276,6 +276,64 @@ test.describe('override and synced scrolling', () => {
       .toBeLessThan(0.25);
   });
 
+  test('opening from empty space resolves to the nearest block', async ({
+    page
+  }) => {
+    await page.goto();
+    await writeAndOpenContent(page, MD_LONG, FILE_LONG, 'Markdown Preview');
+
+    const heading = page.locator(
+      '.jp-MarkdownViewer .jp-RenderedMarkdown h2:has-text("Heading 15")'
+    );
+    await heading.waitFor();
+
+    // Right-click the empty margin just below the heading - the host element
+    // itself, not a child block. Before the fix the command bailed here
+    // ("clicked content is not a rendered block") and nothing opened.
+    const pt = await page.evaluate(() => {
+      const pv = Array.from(
+        document.querySelectorAll('.jp-MarkdownViewer')
+      ).find((v: any) => v.offsetParent !== null) as HTMLElement;
+      const host = pv.querySelector('.jp-RenderedMarkdown') as HTMLElement;
+      const h = Array.from(host.children).find(
+        k => k.tagName === 'H2' && k.textContent?.includes('Heading 15')
+      ) as HTMLElement;
+      const r = h.getBoundingClientRect();
+      const next = (
+        h.nextElementSibling as HTMLElement
+      ).getBoundingClientRect();
+      const hostR = host.getBoundingClientRect();
+      const x = Math.round(hostR.left + hostR.width / 2);
+      // First third of the inter-block gap: in the host, closest to the heading.
+      const y = Math.round(r.bottom + Math.max(2, (next.top - r.bottom) / 3));
+      return { x, y, onHost: document.elementFromPoint(x, y) === host };
+    });
+    // Precondition: the click really lands on the host, exercising the fallback.
+    expect(pt.onHost).toBe(true);
+
+    await page.mouse.click(pt.x, pt.y, { button: 'right' });
+    await page
+      .locator('.lm-Menu-itemLabel:has-text("Show Markdown Editor")')
+      .click();
+    await page.locator('.jp-FileEditor').waitFor({ timeout: 30000 });
+
+    // The editor opened and the cursor landed on the nearest block (the heading).
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => {
+            const w = (window as any).jupyterapp.shell.currentWidget;
+            const ed = w && w.content && w.content.editor;
+            if (!ed) {
+              return '';
+            }
+            return ed.getLine(ed.getCursorPosition().line) ?? '';
+          }),
+        { timeout: 15000 }
+      )
+      .toBe('## Heading 15');
+  });
+
   test('sync: scrolling the focused editor drives the preview', async ({
     page
   }) => {
