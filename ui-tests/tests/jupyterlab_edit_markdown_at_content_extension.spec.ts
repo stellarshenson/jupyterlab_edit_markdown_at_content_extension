@@ -289,7 +289,11 @@ test.describe('override and synced scrolling', () => {
 
     // Right-click the empty margin just below the heading - the host element
     // itself, not a child block. Before the fix the command bailed here
-    // ("clicked content is not a rendered block") and nothing opened.
+    // ("clicked content is not a rendered block") and nothing opened. Scan
+    // down the inter-block gap for the first pixel that genuinely belongs to
+    // the host (margin sizes differ between environments, so a fixed fraction
+    // is unreliable); the first host pixel below the heading is closest to it,
+    // so the nearest-block fallback resolves to the heading.
     const pt = await page.evaluate(() => {
       const pv = Array.from(
         document.querySelectorAll('.jp-MarkdownViewer')
@@ -304,12 +308,18 @@ test.describe('override and synced scrolling', () => {
       ).getBoundingClientRect();
       const hostR = host.getBoundingClientRect();
       const x = Math.round(hostR.left + hostR.width / 2);
-      // First third of the inter-block gap: in the host, closest to the heading.
-      const y = Math.round(r.bottom + Math.max(2, (next.top - r.bottom) / 3));
-      return { x, y, onHost: document.elementFromPoint(x, y) === host };
+      let y = -1;
+      for (let yy = Math.ceil(r.bottom) + 1; yy < Math.floor(next.top); yy++) {
+        if (document.elementFromPoint(x, yy) === host) {
+          y = yy;
+          break;
+        }
+      }
+      return { x, y, found: y >= 0 };
     });
-    // Precondition: the click really lands on the host, exercising the fallback.
-    expect(pt.onHost).toBe(true);
+    // Precondition: a host-owned pixel exists in the gap (the click really
+    // lands on empty space, exercising the fallback).
+    expect(pt.found).toBe(true);
 
     await page.mouse.click(pt.x, pt.y, { button: 'right' });
     await page
