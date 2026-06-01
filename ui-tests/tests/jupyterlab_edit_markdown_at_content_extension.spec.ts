@@ -287,14 +287,16 @@ test.describe('override and synced scrolling', () => {
     );
     await heading.waitFor();
 
-    // Right-click the empty margin just below the heading - the host element
-    // itself, not a child block. Before the fix the command bailed here
-    // ("clicked content is not a rendered block") and nothing opened. Scan
-    // down the inter-block gap for the first pixel that genuinely belongs to
-    // the host (margin sizes differ between environments, so a fixed fraction
-    // is unreliable); the first host pixel below the heading is closest to it,
-    // so the nearest-block fallback resolves to the heading.
-    const pt = await page.evaluate(() => {
+    // A right-click on empty space resolves to the host element itself, not a
+    // child block; before the fix the command bailed ("clicked content is not
+    // a rendered block") and nothing opened. The behaviour under test is
+    // "target === host -> resolve to the nearest block by Y", so synthesise
+    // that condition directly: dispatch a contextmenu whose target IS the host
+    // (the extension's capture-phase listener stashes the host + clientY), with
+    // the click Y inside the Heading 15 band, then run the command. This avoids
+    // depending on rendered margin sizes to manufacture an empty-space pixel,
+    // which collapses to near-zero in some environments.
+    const found = await page.evaluate(async () => {
       const pv = Array.from(
         document.querySelectorAll('.jp-MarkdownViewer')
       ).find((v: any) => v.offsetParent !== null) as HTMLElement;
@@ -302,29 +304,23 @@ test.describe('override and synced scrolling', () => {
       const h = Array.from(host.children).find(
         k => k.tagName === 'H2' && k.textContent?.includes('Heading 15')
       ) as HTMLElement;
-      const r = h.getBoundingClientRect();
-      const next = (
-        h.nextElementSibling as HTMLElement
-      ).getBoundingClientRect();
-      const hostR = host.getBoundingClientRect();
-      const x = Math.round(hostR.left + hostR.width / 2);
-      let y = -1;
-      for (let yy = Math.ceil(r.bottom) + 1; yy < Math.floor(next.top); yy++) {
-        if (document.elementFromPoint(x, yy) === host) {
-          y = yy;
-          break;
-        }
+      if (!h) {
+        return false;
       }
-      return { x, y, found: y >= 0 };
+      const r = h.getBoundingClientRect();
+      host.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          clientX: Math.round(r.left + r.width / 2),
+          clientY: Math.round(r.top + r.height / 2)
+        })
+      );
+      await (window as any).jupyterapp.commands.execute(
+        'editmarkdownatcontent:edit-at-location'
+      );
+      return true;
     });
-    // Precondition: a host-owned pixel exists in the gap (the click really
-    // lands on empty space, exercising the fallback).
-    expect(pt.found).toBe(true);
-
-    await page.mouse.click(pt.x, pt.y, { button: 'right' });
-    await page
-      .locator('.lm-Menu-itemLabel:has-text("Show Markdown Editor")')
-      .click();
+    expect(found).toBe(true);
     await page.locator('.jp-FileEditor').waitFor({ timeout: 30000 });
 
     // The editor opened and the cursor landed on the nearest block (the heading).
