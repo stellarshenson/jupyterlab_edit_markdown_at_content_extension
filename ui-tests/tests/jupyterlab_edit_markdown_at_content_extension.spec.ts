@@ -70,7 +70,7 @@ test.describe('edit-at-content flows', () => {
     await para.waitFor();
     await para.click({ button: 'right' });
     await page
-      .locator('.lm-Menu-itemLabel:has-text("Edit at this location")')
+      .locator('.lm-Menu-itemLabel:has-text("Show Markdown Editor")')
       .click();
 
     // AC #2: the editor opens.
@@ -119,7 +119,7 @@ test.describe('edit-at-content flows', () => {
     await expect(para).toBeInViewport();
   });
 
-  test('negative: no "Edit at this location" on a rendered notebook markdown cell', async ({
+  test('negative: no "Show Markdown Editor" on a rendered notebook markdown cell', async ({
     page
   }) => {
     await page.goto();
@@ -134,8 +134,224 @@ test.describe('edit-at-content flows', () => {
     await rendered.click({ button: 'right' });
 
     await expect(
-      page.locator('.lm-Menu-itemLabel:has-text("Edit at this location")')
+      page.locator('.lm-Menu-itemLabel:has-text("Show Markdown Editor")')
     ).toHaveCount(0);
     await page.keyboard.press('Escape');
+  });
+});
+
+// A document long enough to require scrolling in both panes. Block 0 is the
+// "Heading 1" h2 at source line 0; the last heading is "Heading 30".
+const MD_LONG = Array.from(
+  { length: 30 },
+  (_, i) =>
+    `## Heading ${i + 1}\n\nBody paragraph ${i + 1} with padding so the document scrolls in both panes.\n`
+).join('\n');
+
+const FILE_LONG = 'edit-md-content-long.md';
+
+async function writeAndOpenContent(
+  page: any,
+  content: string,
+  path: string,
+  factory: 'Markdown Preview' | 'Editor'
+): Promise<void> {
+  await page.contents.uploadContent(content, 'text', path);
+  await page.evaluate(
+    async (args: { path: string; factory: string }) => {
+      await (window as any).jupyterapp.commands.execute(
+        'docmanager:open',
+        args
+      );
+    },
+    { path, factory }
+  );
+}
+
+/** Right-click the rendered block and invoke "Show Markdown Editor". */
+async function showEditorFor(page: any, blockSelector: string): Promise<void> {
+  const block = page.locator(blockSelector);
+  await block.waitFor();
+  await block.click({ button: 'right' });
+  await page
+    .locator('.lm-Menu-itemLabel:has-text("Show Markdown Editor")')
+    .click();
+  await page.locator('.jp-FileEditor').waitFor({ timeout: 30000 });
+}
+
+/** 0-based index of the first preview block whose bottom is below the host top. */
+function previewTopBlockText(): string {
+  const pv = Array.from(document.querySelectorAll('.jp-MarkdownViewer')).find(
+    (v: any) => v.offsetParent !== null
+  ) as HTMLElement;
+  const host = pv.querySelector('.jp-RenderedMarkdown') as HTMLElement;
+  const top = host.getBoundingClientRect().top;
+  const kids = Array.from(host.children);
+  const i = kids.findIndex(k => k.getBoundingClientRect().bottom > top + 4);
+  return (kids[i]?.textContent ?? '').replace('¶', '').trim();
+}
+
+test.describe('override and synced scrolling', () => {
+  test.afterEach(async ({ page }) => {
+    await page.contents.deleteFile(FILE).catch(() => undefined);
+    await page.contents.deleteFile(FILE_LONG).catch(() => undefined);
+  });
+
+  test('override: a single "Show Markdown Editor" opens the editor split-right', async ({
+    page
+  }) => {
+    await page.goto();
+    await writeAndOpen(page, 'Markdown Preview');
+
+    const para = page.locator(
+      '.jp-MarkdownViewer .jp-RenderedMarkdown p:has-text("Final paragraph here.")'
+    );
+    await para.waitFor();
+    await para.click({ button: 'right' });
+
+    // Core's identically named item is disabled, so exactly one remains.
+    await expect(
+      page.locator('.lm-Menu-itemLabel:has-text("Show Markdown Editor")')
+    ).toHaveCount(1);
+
+    await page
+      .locator('.lm-Menu-itemLabel:has-text("Show Markdown Editor")')
+      .click();
+    await page.locator('.jp-FileEditor').waitFor({ timeout: 30000 });
+
+    // Both panes visible, editor to the right of the preview (split-right).
+    const layout = await page.evaluate(() => {
+      const ed = Array.from(document.querySelectorAll('.jp-FileEditor')).find(
+        (f: any) => f.offsetParent !== null
+      ) as HTMLElement;
+      const pv = Array.from(
+        document.querySelectorAll('.jp-MarkdownViewer')
+      ).find((v: any) => v.offsetParent !== null) as HTMLElement;
+      return {
+        both: !!ed && !!pv,
+        editorRightOfPreview:
+          ed.getBoundingClientRect().left > pv.getBoundingClientRect().left
+      };
+    });
+    expect(layout.both).toBe(true);
+    expect(layout.editorRightOfPreview).toBe(true);
+  });
+
+  test('opening from a mid-document block puts that line at the top of the editor', async ({
+    page
+  }) => {
+    await page.goto();
+    await writeAndOpenContent(page, MD_LONG, FILE_LONG, 'Markdown Preview');
+    await showEditorFor(
+      page,
+      '.jp-MarkdownViewer .jp-RenderedMarkdown h2:has-text("Heading 15")'
+    );
+
+    // The clicked heading should be the top visible editor line, not at the
+    // bottom of the viewport.
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(() => {
+            const ed = Array.from(
+              document.querySelectorAll('.jp-FileEditor')
+            ).find((f: any) => f.offsetParent !== null) as HTMLElement;
+            const sc = ed.querySelector('.cm-scroller') as HTMLElement;
+            const top = sc.getBoundingClientRect().top;
+            const line = Array.from(ed.querySelectorAll('.cm-line')).find(l => {
+              const r = l.getBoundingClientRect();
+              return r.bottom > top + 4;
+            });
+            return (line?.textContent ?? '').trim();
+          }),
+        { timeout: 15000 }
+      )
+      .toBe('## Heading 15');
+  });
+
+  test('sync: scrolling the focused editor drives the preview', async ({
+    page
+  }) => {
+    await page.goto();
+    await writeAndOpenContent(page, MD_LONG, FILE_LONG, 'Markdown Preview');
+    await showEditorFor(
+      page,
+      '.jp-MarkdownViewer .jp-RenderedMarkdown h2:has-text("Heading 30")'
+    );
+
+    // Claim the editor (wheel) and scroll it to the top.
+    await page.evaluate(() => {
+      const ed = Array.from(document.querySelectorAll('.jp-FileEditor')).find(
+        (f: any) => f.offsetParent !== null
+      ) as HTMLElement;
+      ed.dispatchEvent(new WheelEvent('wheel', { bubbles: true }));
+      const sc = ed.querySelector('.cm-scroller') as HTMLElement;
+      sc.scrollTop = 0;
+      sc.dispatchEvent(new Event('scroll'));
+    });
+
+    // The preview follows to the top of the document.
+    await expect
+      .poll(async () => page.evaluate(previewTopBlockText), { timeout: 15000 })
+      .toBe('Heading 1');
+  });
+
+  test('sync: a pane that is not focused does not drive the other', async ({
+    page
+  }) => {
+    await page.goto();
+    await writeAndOpenContent(page, MD_LONG, FILE_LONG, 'Markdown Preview');
+    await showEditorFor(
+      page,
+      '.jp-MarkdownViewer .jp-RenderedMarkdown h2:has-text("Heading 30")'
+    );
+
+    // Editor is the driver (just opened + focused); scroll it to a known spot.
+    await page.evaluate(() => {
+      const ed = Array.from(document.querySelectorAll('.jp-FileEditor')).find(
+        (f: any) => f.offsetParent !== null
+      ) as HTMLElement;
+      ed.dispatchEvent(new WheelEvent('wheel', { bubbles: true }));
+      const sc = ed.querySelector('.cm-scroller') as HTMLElement;
+      sc.scrollTop = Math.round(sc.scrollHeight / 2);
+      sc.dispatchEvent(new Event('scroll'));
+    });
+    await page.waitForTimeout(500);
+    const editorScrollTop = await page.evaluate(() => {
+      const ed = Array.from(document.querySelectorAll('.jp-FileEditor')).find(
+        (f: any) => f.offsetParent !== null
+      ) as HTMLElement;
+      return Math.round(
+        (ed.querySelector('.cm-scroller') as HTMLElement).scrollTop
+      );
+    });
+
+    // Scroll the preview WITHOUT claiming it (no wheel/pointer): the editor
+    // must not move, because only the focused pane drives.
+    await page.evaluate(() => {
+      const pv = Array.from(
+        document.querySelectorAll('.jp-MarkdownViewer')
+      ).find((v: any) => v.offsetParent !== null) as HTMLElement;
+      const host = pv.querySelector('.jp-RenderedMarkdown') as HTMLElement;
+      let el: HTMLElement | null = host;
+      while (el && el.scrollHeight <= el.clientHeight + 2) {
+        el = el.parentElement;
+      }
+      if (el) {
+        el.scrollTop = 0;
+        el.dispatchEvent(new Event('scroll'));
+      }
+    });
+    await page.waitForTimeout(700);
+
+    const editorScrollTopAfter = await page.evaluate(() => {
+      const ed = Array.from(document.querySelectorAll('.jp-FileEditor')).find(
+        (f: any) => f.offsetParent !== null
+      ) as HTMLElement;
+      return Math.round(
+        (ed.querySelector('.cm-scroller') as HTMLElement).scrollTop
+      );
+    });
+    expect(editorScrollTopAfter).toBe(editorScrollTop);
   });
 });

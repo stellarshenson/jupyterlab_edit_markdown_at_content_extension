@@ -12,9 +12,9 @@ Jump straight from a rendered markdown file into the editor at the exact line yo
 
 ## Features
 
-- **Edit at content location** - open the editor scrolled to the line matching the rendered content you are viewing
-- **No-scroll workflow** - skips the manual hunt for the right line after switching from preview to editor
-- **Server-side support** - a Python `jupyter_server` extension backs the frontend with the routes it needs
+- **Show Markdown Editor** - right-click rendered content and pick "Show Markdown Editor"; the editor opens split-right with the cursor on the line that produced what you clicked. This replaces JupyterLab core's identically named command, which always opened at line 0
+- **Reveal in Markdown Preview** - right-click in the editor and pick "Reveal in Markdown Preview" to scroll the rendered preview to the block at the cursor
+- **Synced scrolling** - once the editor is opened from the preview, the two panes track each other: the pane you are scrolling drives, the other follows to the matching location. Toggle with the `trackEditor` setting (on by default) under Settings → Edit Markdown at Content
 
 ## Requirements
 

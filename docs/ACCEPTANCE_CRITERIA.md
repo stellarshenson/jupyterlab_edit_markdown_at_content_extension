@@ -21,10 +21,11 @@ from the source text already held by the open document, so no server round-trip 
 
 ## Functional criteria - Preview to Editor
 
-1. Right-clicking inside the rendered Markdown Preview shows an "Edit at this location" item; it is
+1. Right-clicking inside the rendered Markdown Preview shows a "Show Markdown Editor" item that
+   replaces JupyterLab core's identically named command (core's always opens at line 0); it is
    absent from the context menu of any non-markdown-preview surface
-2. Selecting the item opens the same file with the `Editor` factory (revealing the existing editor
-   tab if one is already open, otherwise opening a new one)
+2. Selecting the item opens the same file with the `Editor` factory split-right, matching core
+   (revealing the existing editor tab if one is already open, otherwise opening a new split)
 3. The editor cursor is placed on the source line that produced the clicked element, and that line is
    scrolled into view
 4. For well-formed markdown with no duplicate adjacent text, the cursor lands on the correct source

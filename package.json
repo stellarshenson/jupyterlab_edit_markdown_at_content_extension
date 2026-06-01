@@ -1,6 +1,6 @@
 {
     "name": "jupyterlab_edit_markdown_at_content_extension",
-    "version": "0.4.3",
+    "version": "0.6.6",
     "description": "Jupyterlab extension to save you the scrolling time from when you are at markdown file location and open editor and need to scroll to the exact place in the file where the content is. This extension opens the editor at the place where the content is",
     "keywords": [
         "jupyter",
@@ -19,7 +19,8 @@
     "files": [
         "lib/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
         "style/**/*.{css,js,eot,gif,html,jpg,json,png,svg,woff2,ttf}",
-        "src/**/*.{ts,tsx}"
+        "src/**/*.{ts,tsx}",
+        "schema/*.json"
     ],
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
@@ -56,12 +57,14 @@
         "watch:labextension": "jupyter labextension watch ."
     },
     "dependencies": {
+        "@codemirror/view": "^6.26.0",
         "@jupyterlab/application": "^4.5.0",
         "@jupyterlab/codeeditor": "^4.5.0",
         "@jupyterlab/docmanager": "^4.5.0",
         "@jupyterlab/docregistry": "^4.5.0",
         "@jupyterlab/fileeditor": "^4.5.0",
         "@jupyterlab/markdownviewer": "^4.5.0",
+        "@jupyterlab/settingregistry": "^4.5.0",
         "marked": "^17.0.0"
     },
     "devDependencies": {
@@ -111,7 +114,8 @@
     },
     "jupyterlab": {
         "extension": true,
-        "outputDir": "jupyterlab_edit_markdown_at_content_extension/labextension"
+        "outputDir": "jupyterlab_edit_markdown_at_content_extension/labextension",
+        "schemaDir": "schema"
     },
     "eslintIgnore": [
         "node_modules",
