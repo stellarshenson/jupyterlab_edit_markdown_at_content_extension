@@ -1,6 +1,6 @@
 {
     "name": "jupyterlab_edit_markdown_at_content_extension",
-    "version": "0.4.2",
+    "version": "0.4.3",
     "description": "Jupyterlab extension to save you the scrolling time from when you are at markdown file location and open editor and need to scroll to the exact place in the file where the content is. This extension opens the editor at the place where the content is",
     "keywords": [
         "jupyter",
