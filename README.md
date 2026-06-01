@@ -16,6 +16,16 @@ Jump straight from a rendered markdown file into the editor at the exact line yo
 - **Reveal in Markdown Preview** - right-click in the editor and pick "Reveal in Markdown Preview" to scroll the rendered preview to the block at the cursor
 - **Synced scrolling** - once the editor is opened from the preview, the two panes track each other: the pane you are scrolling drives, the other follows to the matching location. Toggle with the `trackEditor` setting (on by default) under Settings → Edit Markdown at Content
 
+## Usage
+
+- In a rendered Markdown Preview, right-click the content you are reading and choose **Show Markdown Editor**. The editor opens to the right with the cursor on that line, scrolled to the top
+- In the editor, right-click and choose **Reveal in Markdown Preview** to scroll the preview to the block at the cursor
+- With both panes open, scrolling the focused pane scrolls the other to the matching location
+
+## Settings
+
+- **trackEditor** (default `true`) - keep the editor and preview scrolled together once opened from the preview. Turn it off under Settings → Settings Editor → Edit Markdown at Content
+
 ## Requirements
 
 - JupyterLab >= 4.0.0
