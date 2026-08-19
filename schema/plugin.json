@@ -1,15 +1,6 @@
 {
   "title": "Edit Markdown at Content",
   "description": "Settings for the edit-markdown-at-content extension.",
-  "jupyter.lab.menus": {
-    "context": [
-      {
-        "command": "markdownviewer:edit",
-        "selector": ".jp-RenderedMarkdown",
-        "disabled": true
-      }
-    ]
-  },
   "properties": {
     "trackEditor": {
       "title": "Track editor and preview together",

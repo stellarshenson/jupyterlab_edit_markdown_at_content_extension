@@ -138,6 +138,38 @@ test.describe('edit-at-content flows', () => {
     ).toHaveCount(0);
     await page.keyboard.press('Escape');
   });
+
+  test('does not warn that the markdownviewer:edit menu entry is duplicated', async ({
+    page
+  }) => {
+    // The extension no longer declares a schema context entry for
+    // markdownviewer:edit, so core's menu reconcile must not warn that the
+    // entry is duplicated. Capture warnings across load and the first context
+    // menu open (the reconcile is lazy in some builds).
+    const warnings: string[] = [];
+    page.on('console', message => {
+      if (message.type() === 'warning' || message.type() === 'error') {
+        warnings.push(message.text());
+      }
+    });
+
+    await page.goto();
+    await writeAndOpen(page, 'Markdown Preview');
+
+    const para = page.locator(
+      '.jp-MarkdownViewer .jp-RenderedMarkdown p:has-text("Final paragraph here.")'
+    );
+    await para.waitFor();
+    await para.click({ button: 'right' });
+    await page.locator('.lm-Menu').first().waitFor();
+    await page.keyboard.press('Escape');
+
+    expect(
+      warnings.filter(
+        w => w.includes('markdownviewer:edit') && w.includes('duplicated')
+      )
+    ).toHaveLength(0);
+  });
 });
 
 // A document long enough to require scrolling in both panes. Block 0 is the
@@ -209,7 +241,8 @@ test.describe('override and synced scrolling', () => {
     await para.waitFor();
     await para.click({ button: 'right' });
 
-    // Core's identically named item is disabled, so exactly one remains.
+    // Core contributes the only "Show Markdown Editor" item; the extension no
+    // longer adds a second one, so exactly one remains.
     await expect(
       page.locator('.lm-Menu-itemLabel:has-text("Show Markdown Editor")')
     ).toHaveCount(1);
@@ -288,12 +321,12 @@ test.describe('override and synced scrolling', () => {
     await heading.waitFor();
 
     // A right-click on empty space resolves to the host element itself, not a
-    // child block; before the fix the command bailed ("clicked content is not
-    // a rendered block") and nothing opened. The behaviour under test is
-    // "target === host -> resolve to the nearest block by Y", so synthesise
-    // that condition directly: dispatch a contextmenu whose target IS the host
-    // (the extension's capture-phase listener stashes the host + clientY), with
-    // the click Y inside the Heading 15 band, then run the command. This avoids
+    // child block; the extension must still resolve it to the nearest block by
+    // Y rather than open at line 0. Synthesise that condition directly: dispatch
+    // a contextmenu whose target IS the host (the extension's capture-phase
+    // listener stashes the host + clientY) with the click Y inside the Heading
+    // 15 band, then run core's `markdownviewer:edit` - the command whose
+    // execution the extension hooks to reposition the editor. This avoids
     // depending on rendered margin sizes to manufacture an empty-space pixel,
     // which collapses to near-zero in some environments.
     const found = await page.evaluate(async () => {
@@ -315,9 +348,7 @@ test.describe('override and synced scrolling', () => {
           clientY: Math.round(r.top + r.height / 2)
         })
       );
-      await (window as any).jupyterapp.commands.execute(
-        'editmarkdownatcontent:edit-at-location'
-      );
+      await (window as any).jupyterapp.commands.execute('markdownviewer:edit');
       return true;
     });
     expect(found).toBe(true);

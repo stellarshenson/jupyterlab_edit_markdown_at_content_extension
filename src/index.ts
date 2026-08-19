@@ -21,7 +21,7 @@ import {
 } from './mapping';
 
 const PLUGIN_ID = 'jupyterlab_edit_markdown_at_content_extension:plugin';
-const CMD_EDIT_AT = 'editmarkdownatcontent:edit-at-location';
+const CORE_EDIT_COMMAND = 'markdownviewer:edit';
 const CMD_REVEAL_IN = 'editmarkdownatcontent:reveal-in-preview';
 
 const PREVIEW_SELECTOR = '.jp-MarkdownViewer .jp-RenderedMarkdown';
@@ -302,88 +302,95 @@ const plugin: JupyterFrontEndPlugin<void> = {
     };
 
     // ---- Preview -> Editor -------------------------------------------------
-    // Labelled "Show Markdown Editor" to replace JupyterLab core's identically
-    // named command (`markdownviewer:edit`), which always opens the editor at
-    // line 0. The core context-menu item is disabled in `schema/plugin.json`,
-    // so this position-aware command is the only one shown.
-    app.commands.addCommand(CMD_EDIT_AT, {
-      label: 'Show Markdown Editor',
-      execute: async () => {
-        const target = lastPreviewTarget;
-        if (!target) {
-          console.warn(`${LOG} no markdown preview target under the cursor`);
-          return;
-        }
-        const widget = findPreviewWidget(target);
-        if (!widget) {
-          console.warn(`${LOG} could not resolve the owning Markdown Preview`);
-          return;
-        }
-        // Resolve the host from the target's own rendered ancestor (closest
-        // includes the target itself), so a click on the host element resolves
-        // the same host rather than the widget's first matching node.
-        const host =
-          (target.closest('.jp-RenderedMarkdown') as HTMLElement | null) ??
-          renderedHost(widget);
-        if (!host) {
-          console.warn(`${LOG} rendered host not found`);
-          return;
-        }
-
-        // Walk up to the top-level block (direct child of the host). When the
-        // click landed on the host itself (empty space between or beside
-        // blocks), fall back to the block nearest the click Y.
-        let block: Element | null = target;
-        while (block && block.parentElement !== host) {
-          block = block.parentElement;
-        }
-        const ordinal = block
-          ? Array.from(host.children).indexOf(block)
-          : nearestChildOrdinal(host, lastPreviewY);
-        if (ordinal < 0) {
-          console.warn(`${LOG} clicked content is not a rendered block`);
-          return;
-        }
-        const source: string = widget.context.model.toString();
-        const line = blockToLine(source, ordinal);
-        if (line < 0) {
-          console.warn(`${LOG} block ordinal ${ordinal} is not mappable`);
-          return;
-        }
-
-        // Match core's `markdownviewer:edit`: open the editor split-right when
-        // it is not already open. When it is open (the side-by-side case), this
-        // just reveals the existing editor and we scroll it below.
-        const editorWidget: any = docManager.openOrReveal(
-          widget.context.path,
-          EDITOR_FACTORY,
-          undefined,
-          { mode: 'split-right' }
-        );
-        if (!editorWidget) {
-          return;
-        }
-        await editorWidget.context.ready;
-        await editorWidget.revealed;
-        const editor = editorWidget.content.editor;
-        const clamped = Math.min(line, editor.lineCount - 1);
-        editor.setCursorPosition({ line: clamped, column: 0 });
-        // Focus so the cursor is live (you asked to edit here), then scroll the
-        // line to the TOP of the viewport. Near the end of the document the
-        // browser clamps scrollTop, so the line sits as high as it can.
-        editor.focus();
-        scrollEditorToTop(editor, clamped);
-
-        // Keep the two panes scrolled together from here on.
-        if (trackEnabled) {
-          establishSync(widget, editorWidget);
-        }
+    // JupyterLab core already contributes "Show Markdown Editor"
+    // (`markdownviewer:edit`) to the rendered-preview context menu, but it
+    // always opens the editor at line 0. Rather than add a second, identically
+    // labelled item and disable core's - which makes core's menu reconcile warn
+    // that the entry is duplicated - we let core's single item open the editor
+    // and, right after it runs, reposition that editor to the clicked line and
+    // wire up the scroll sync. This is a no-op unless the command was invoked
+    // from a right-click on a rendered preview, so core's plain line-0
+    // behaviour still stands for palette or toolbar invocations.
+    const editAtClickedLocation = async (): Promise<void> => {
+      const target = lastPreviewTarget;
+      lastPreviewTarget = null; // single-use: consume this right-click
+      if (!target || !target.isConnected) {
+        return;
       }
-    });
-    app.contextMenu.addItem({
-      command: CMD_EDIT_AT,
-      selector: PREVIEW_SELECTOR,
-      rank: 0
+      const widget = findPreviewWidget(target);
+      if (!widget) {
+        return;
+      }
+      // Only reposition for the preview core actually edited - the markdown
+      // viewer tracker's current widget. Right-clicking a preview activates it,
+      // so the genuine flow always matches; a stale or divergent target then
+      // degrades to core's plain line-0 open instead of repositioning the wrong
+      // editor or opening a second one for a different file.
+      if (widget !== markdownTracker.currentWidget) {
+        return;
+      }
+      // Resolve the host from the target's own rendered ancestor (closest
+      // includes the target itself), so a click on the host element resolves
+      // the same host rather than the widget's first matching node.
+      const host =
+        (target.closest('.jp-RenderedMarkdown') as HTMLElement | null) ??
+        renderedHost(widget);
+      if (!host) {
+        return;
+      }
+
+      // Walk up to the top-level block (direct child of the host). When the
+      // click landed on the host itself (empty space between or beside blocks),
+      // fall back to the block nearest the click Y.
+      let block: Element | null = target;
+      while (block && block.parentElement !== host) {
+        block = block.parentElement;
+      }
+      const ordinal = block
+        ? Array.from(host.children).indexOf(block)
+        : nearestChildOrdinal(host, lastPreviewY);
+      if (ordinal < 0) {
+        return;
+      }
+      const source: string = widget.context.model.toString();
+      const line = blockToLine(source, ordinal);
+      if (line < 0) {
+        return;
+      }
+
+      // Core opened the editor split-right; openOrReveal returns that same
+      // widget (idempotent by path + factory) and reveals it if side-by-side.
+      const editorWidget: any = docManager.openOrReveal(
+        widget.context.path,
+        EDITOR_FACTORY,
+        undefined,
+        { mode: 'split-right' }
+      );
+      if (!editorWidget) {
+        return;
+      }
+      await editorWidget.context.ready;
+      await editorWidget.revealed;
+      const editor = editorWidget.content.editor;
+      const clamped = Math.min(line, editor.lineCount - 1);
+      editor.setCursorPosition({ line: clamped, column: 0 });
+      // Focus so the cursor is live (you asked to edit here), then scroll the
+      // line to the TOP of the viewport. Near the end of the document the
+      // browser clamps scrollTop, so the line sits as high as it can.
+      editor.focus();
+      scrollEditorToTop(editor, clamped);
+
+      // Keep the two panes scrolled together from here on.
+      if (trackEnabled) {
+        establishSync(widget, editorWidget);
+      }
+    };
+
+    // Fire after core's "Show Markdown Editor" opens the editor.
+    app.commands.commandExecuted.connect((_registry, executed) => {
+      if (executed.id === CORE_EDIT_COMMAND) {
+        void editAtClickedLocation();
+      }
     });
 
     // ---- Editor -> Preview -------------------------------------------------
