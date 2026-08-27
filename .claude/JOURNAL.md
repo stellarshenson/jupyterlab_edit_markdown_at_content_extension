@@ -51,3 +51,6 @@ This journal tracks substantive work on documents, diagrams, and documentation c
 
 16. **Task - Verify CI green after the Playwright fix** (v1.0.21): Confirmed the Integration tests job passes on GitHub Actions, then released the verified tree<br>
     **Result**: Build #30 and Check Release #30 on `dfecaa3` both returned success, all four Build jobs green - `build`, `Check Links`, `test_isolated` and `Integration tests` - closing the loop opened when #28 collected no tests at all. Queried through the Actions REST API per the `my-git` skill, since `gh` is not installed here; polling the run's `/jobs` endpoint rather than the run itself is what made `Integration tests` visible moving from queued to running to success, because the run-level status stays `in_progress` throughout. No source changed for this release - 1.0.21 carries the same tree as the verified commit, published so the registry version corresponds to the first CI-green build.
+
+17. **Task [Short] - Republish unchanged tree** (v1.0.22): Released 1.0.22 from the same source as 1.0.21; no code, test, doc or dependency change<br>
+    **Result**: Version bump only, on a clean tree already verified green by Build #30

@@ -2,13 +2,19 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.22] - 2026-08-27
+
+### Changed
+
+- No functional changes. Republished from the same source tree as 1.0.21
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## [1.0.21] - 2026-08-27
 
 ### Changed
 
 - No source changes. Republished on the first tree whose CI run is fully green, so the registry version corresponds to a verified build: Build #30 passed `build`, `Check Links`, `test_isolated` and `Integration tests`
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## [1.0.20] - 2026-08-27
 
