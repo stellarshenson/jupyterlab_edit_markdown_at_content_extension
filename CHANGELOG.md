@@ -2,6 +2,14 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.20] - 2026-08-27
+
+### Fixed
+
+- Integration tests collect again. `ui-tests` resolved two copies of `@playwright/test` - the template's `^1.37.0` at 1.60.0 alongside the `^1.60.0` that `@jupyterlab/galata` 5.6.3 pulls at 1.62.1 - so the runner loaded one instance while the spec's `test`, re-exported by galata, came from the other. Playwright reported `test.use() called here` and then found no tests at all. The declared range is now `^1.62.1`, which resolves to a single instance
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## [1.0.19] - 2026-08-27
 
 ### Fixed
@@ -16,8 +24,6 @@
 
 - The block map is memoized on the source string, so scroll sync no longer re-lexes an unchanged document on every scroll event
 - README: dropped the claim that this extension replaces JupyterLab core's identically named command - it extends it - and documented that mapping is block-level, so a click inside a list or table lands on the first line of that list or table
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## [1.0.17] - 2026-08-19
 
