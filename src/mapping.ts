@@ -25,8 +25,6 @@ export interface IBlockDescriptor {
   endLine: number;
   /** marked token type (heading, paragraph, code, list, table, ...). */
   type: string;
-  /** Normalized block text, for the empty-block guard. */
-  text: string;
   /** Present only for heading tokens: createHeaderId form of the heading text. */
   headingSlug?: string;
 }
@@ -65,17 +63,18 @@ function plainText(text: string): string {
     .trim();
 }
 
-/** Normalized text used for the empty-block guard. */
-function blockText(token: {
-  type: string;
-  text?: string;
-  raw?: string;
-}): string {
-  if (token.type === 'hr') {
-    return '';
-  }
-  return (token.text ?? token.raw ?? '').trim();
-}
+/**
+ * Core's own front-matter regex, copied verbatim from MarkdownViewer's
+ * `Private.removeFrontMatter`. The viewer renders with `hideFrontMatter: true`
+ * by default, so it strips this before rendering while we lex the raw model -
+ * mirroring the regex is what keeps our block count equal to the rendered
+ * child count. Any divergence here silently misaligns every ordinal.
+ */
+const FRONT_MATTER = /^---\n[^]*?\n(---|...)\n/;
+
+/** Last `buildBlockMap` result, keyed by source identity (the function is pure). */
+let cachedSource: string | null = null;
+let cachedMap: IBlockMap | null = null;
 
 /**
  * Re-lex `source` and build the ordinal<->line map.
@@ -83,10 +82,24 @@ function blockText(token: {
  * Uses `marked.lexer(source, { gfm: true })` to match core's parser config.
  * The line walk includes EVERY top-level token (space/def advance the
  * counter); the DOM-aligned block list excludes space, def and comment-only
- * html tokens.
+ * html tokens. YAML front matter is stripped first, matching the viewer, and
+ * the lines it occupied are added back so every `startLine` still points into
+ * the ORIGINAL source the editor holds.
+ *
+ * Memoized on the source string: scroll sync calls this on every event with
+ * an unchanged document, and a full lex is milliseconds on a large file. The
+ * returned map is shared by identity - callers must treat it as read-only.
  */
 export function buildBlockMap(source: string): IBlockMap {
-  const tokens = marked.lexer(source, { gfm: true }) as Array<{
+  if (cachedSource === source && cachedMap !== null) {
+    return cachedMap;
+  }
+
+  const frontMatter = source.match(FRONT_MATTER);
+  const body = frontMatter ? source.slice(frontMatter[0].length) : source;
+  const lineOffset = frontMatter ? frontMatter[0].split('\n').length - 1 : 0;
+
+  const tokens = marked.lexer(body, { gfm: true }) as Array<{
     type: string;
     raw: string;
     text?: string;
@@ -96,7 +109,7 @@ export function buildBlockMap(source: string): IBlockMap {
   const blocks: IBlockDescriptor[] = [];
   const headings: { line: number; slug: string; ordinal: number }[] = [];
 
-  let currentLine = 0;
+  let currentLine = lineOffset;
   for (const token of tokens) {
     const startLine = currentLine;
     const spanned = token.raw.split('\n').length - 1;
@@ -111,8 +124,7 @@ export function buildBlockMap(source: string): IBlockMap {
       ordinal,
       startLine,
       endLine: startLine + Math.max(spanned - 1, 0),
-      type: token.type,
-      text: blockText(token)
+      type: token.type
     };
 
     if (token.type === 'heading') {
@@ -127,24 +139,26 @@ export function buildBlockMap(source: string): IBlockMap {
     blocks.push(descriptor);
   }
 
-  return { blocks, headings };
+  const map: IBlockMap = { blocks, headings };
+  cachedSource = source;
+  cachedMap = map;
+  return map;
 }
 
 /**
  * Preview -> Editor. Returns the 0-based start line for the block at DOM
- * ordinal `ordinal`, or -1 when the ordinal is out of range or the block has
- * no textual content (caller no-ops + warns, AC #5).
+ * ordinal `ordinal`, or -1 when the ordinal is out of range.
+ *
+ * A block with no text still has a source line: an `<hr>` came from a real
+ * `---`, and an empty fence from a real ``` pair. Only an ordinal outside the
+ * block list is a failure, so -1 means exactly one thing (ACC-PTOE-6).
  */
 export function blockToLine(source: string, ordinal: number): number {
   const { blocks } = buildBlockMap(source);
   if (ordinal < 0 || ordinal >= blocks.length) {
     return -1;
   }
-  const block = blocks[ordinal];
-  if (block.text.length === 0) {
-    return -1;
-  }
-  return block.startLine;
+  return blocks[ordinal].startLine;
 }
 
 /**

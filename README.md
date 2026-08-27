@@ -12,7 +12,7 @@ Jump straight from a rendered markdown file into the editor at the exact line yo
 
 ## Features
 
-- **Show Markdown Editor** - right-click rendered content and pick "Show Markdown Editor"; the editor opens split-right with the cursor on the line that produced what you clicked. This replaces JupyterLab core's identically named command, which always opened at line 0
+- **Show Markdown Editor** - right-click rendered content and pick "Show Markdown Editor"; the editor opens split-right with the cursor on the line that produced the block you clicked. This extends JupyterLab core's own command, which opens at line 0. Mapping is block-level: clicking inside a list or a table lands on the first line of that list or table, not on the individual item or row
 - **Reveal in Markdown Preview** - right-click in the editor and pick "Reveal in Markdown Preview" to scroll the rendered preview to the block at the cursor
 - **Synced scrolling** - once the editor is opened from the preview, the two panes track each other: the pane you are scrolling drives, the other follows to the matching location. Toggle with the `trackEditor` setting (on by default) under Settings → Edit Markdown at Content
 

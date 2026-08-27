@@ -13,12 +13,7 @@ import { ISettingRegistry } from '@jupyterlab/settingregistry';
 
 import { EditorView } from '@codemirror/view';
 
-import {
-  buildBlockMap,
-  blockToLine,
-  lineToBlock,
-  headingSlug
-} from './mapping';
+import { buildBlockMap, blockToLine, lineToBlock } from './mapping';
 
 const PLUGIN_ID = 'jupyterlab_edit_markdown_at_content_extension:plugin';
 const CORE_EDIT_COMMAND = 'markdownviewer:edit';
@@ -50,15 +45,21 @@ function revealLineInPreview(
     return;
   }
   if (slug) {
+    // Direct children only: `lineToBlock` counts TOP-LEVEL heading tokens, so a
+    // heading nested in a blockquote or list must not consume an occurrence
+    // here or `headingNth` selects the wrong one. Rendermime always sets `id`
+    // or `data-jupyter-id`, so there is no third fallback to try - and a
+    // textContent-derived slug could not match anyway, since `headerAnchors`
+    // appends its own anchor mark inside the heading.
     const headings = Array.from(
-      host.querySelectorAll('h1, h2, h3, h4, h5, h6')
+      host.querySelectorAll(
+        ':scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6'
+      )
     );
     let seen = 0;
     for (const h of headings) {
       const id =
-        (h as HTMLElement).id ||
-        h.getAttribute('data-jupyter-id') ||
-        headingSlug(h.textContent ?? '');
+        (h as HTMLElement).id || h.getAttribute('data-jupyter-id') || '';
       if (id === slug) {
         seen += 1;
         if (seen === (headingNth ?? 1)) {
@@ -146,7 +147,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
           found = widget;
         }
       });
-      return found ?? editorTracker.currentWidget;
+      // No `currentWidget` fallback. This command is driven by the element the
+      // user right-clicked, so resolving to "some other editor" is never the
+      // right answer - CodeMirror recycles `.cm-line` nodes, and a detached
+      // target would silently preview a different file. Bail instead, matching
+      // the preview direction's policy.
+      return found;
     };
 
     /** The `.jp-RenderedMarkdown` host element inside a preview/editor widget. */
@@ -237,6 +243,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
       // The editor was just focused on open, so it drives first.
       let driver: 'editor' | 'preview' = 'editor';
 
+      // The source the preview's DOM was actually built from. Ordinals are DOM
+      // indices, so they are only meaningful against THIS string - the live
+      // model runs ahead of the render by the viewer's debounce, and reading it
+      // instead is what made the block counts diverge on every keystroke.
+      let renderedSource: string = editorWidget.context.model.toString();
+
       const claimEditor = () => {
         driver = 'editor';
       };
@@ -245,31 +257,52 @@ const plugin: JupyterFrontEndPlugin<void> = {
       };
 
       const onEditorScroll = () => {
-        if (driver !== 'editor') {
+        if (!trackEnabled || driver !== 'editor') {
           return;
         }
         const host = renderedHost(previewWidget);
         if (!host || previewWidget.isDisposed || editorWidget.isDisposed) {
           return;
         }
-        const source = editorWidget.context.model.toString();
-        revealLineInPreview(host, source, editorTopLine(editor));
+        revealLineInPreview(host, renderedSource, editorTopLine(editor));
       };
 
       const onPreviewScroll = () => {
-        if (driver !== 'preview') {
+        if (!trackEnabled || driver !== 'preview') {
           return;
         }
         const host = renderedHost(previewWidget);
         if (!host || previewWidget.isDisposed || editorWidget.isDisposed) {
           return;
         }
-        const source = editorWidget.context.model.toString();
-        const line = blockToLine(source, previewTopOrdinal(host));
+        const line = blockToLine(renderedSource, previewTopOrdinal(host));
         if (line >= 0) {
           scrollEditorToTop(editor, line);
         }
       };
+
+      // Typing fires no scroll event, but the viewer re-renders on its own
+      // debounce and replaces every child of the rendered host - which throws
+      // away the preview's scroll offset with nothing to restore it. That is
+      // the desync (DEF-SYNC-1). Re-align the preview to the line the editor is
+      // showing as soon as the new DOM exists, so an edit holds position
+      // instead of jumping (ACC-SYNC-20), against a block map rebuilt from the
+      // source that DOM was just built from (ACC-SYNC-21).
+      const onPreviewRendered = () => {
+        if (previewWidget.isDisposed || editorWidget.isDisposed) {
+          return;
+        }
+        renderedSource = editorWidget.context.model.toString();
+        if (!trackEnabled || driver !== 'editor') {
+          return;
+        }
+        const host = renderedHost(previewWidget);
+        if (!host) {
+          return;
+        }
+        revealLineInPreview(host, renderedSource, editorTopLine(editor));
+      };
+      previewWidget.content.rendered.connect(onPreviewRendered);
 
       // Pointer/wheel/focus on a pane (capture phase, before its scroll fires)
       // makes it the driver. Scroll events do not bubble but are seen in
@@ -295,6 +328,14 @@ const plugin: JupyterFrontEndPlugin<void> = {
         pv.removeEventListener('focusin', claimPreview, claimOpts as any);
         ed.removeEventListener('scroll', onEditorScroll, claimOpts as any);
         pv.removeEventListener('scroll', onPreviewScroll, claimOpts as any);
+        previewWidget.content.rendered.disconnect(onPreviewRendered);
+        // Disconnect from both signals, not just the one that fired. Closing
+        // only the preview leaves this closure - and the detached preview DOM
+        // it captures - alive on the surviving editor's `disposed` signal, and
+        // re-pairing adds another. Lumino's disconnect is idempotent, so a
+        // second run of cleanup is harmless.
+        editorWidget.disposed.disconnect(cleanup);
+        previewWidget.disposed.disconnect(cleanup);
         editorWidget.__emacSynced = false;
       };
       editorWidget.disposed.connect(cleanup);
@@ -353,8 +394,26 @@ const plugin: JupyterFrontEndPlugin<void> = {
         return;
       }
       const source: string = widget.context.model.toString();
+      // The ordinal is a DOM child index; it means nothing unless the lexed
+      // block list has the same length. The two diverge when one token renders
+      // as several elements (consecutive raw HTML), when the sanitizer drops a
+      // token whole (`<script>`, `<style>`), or mid-edit while the viewer still
+      // owes us a re-render. Repositioning on a divergent count lands the
+      // cursor on a confidently wrong line, so degrade to core's plain line-0
+      // open - the same choice this command already makes above when the
+      // preview is not the tracker's current widget.
+      const renderedCount = buildBlockMap(source).blocks.length;
+      if (renderedCount !== host.children.length) {
+        console.warn(
+          `${LOG} rendered ${host.children.length} blocks but the source lexes to ${renderedCount}; left the editor at the top`
+        );
+        return;
+      }
       const line = blockToLine(source, ordinal);
       if (line < 0) {
+        console.warn(
+          `${LOG} block ${ordinal} is out of range; left the editor at the top`
+        );
         return;
       }
 
@@ -389,16 +448,30 @@ const plugin: JupyterFrontEndPlugin<void> = {
     // Fire after core's "Show Markdown Editor" opens the editor.
     app.commands.commandExecuted.connect((_registry, executed) => {
       if (executed.id === CORE_EDIT_COMMAND) {
-        void editAtClickedLocation();
+        // `context.ready` and `revealed` both reject when the document fails to
+        // open (a file deleted server-side, say). Unhandled, that surfaces as an
+        // "Uncaught (in promise)" with nothing naming this extension.
+        void editAtClickedLocation().catch(err =>
+          console.warn(`${LOG} could not reposition the editor`, err)
+        );
       }
     });
 
     // ---- Editor -> Preview -------------------------------------------------
     app.commands.addCommand(CMD_REVEAL_IN, {
       label: 'Reveal in Markdown Preview',
+      // `.jp-FileEditor` is on every file editor, and `openOrReveal` with an
+      // explicit factory performs no file-type check - without this gate the
+      // item appears in a .py or .json editor and renders that source as
+      // markdown. Mirrors core's own gate on `fileeditor:markdown-preview`.
+      isVisible: () => {
+        const path = editorTracker.currentWidget?.context?.path;
+        return typeof path === 'string' && path.toLowerCase().endsWith('.md');
+      },
       execute: async () => {
         const target = lastEditorTarget;
-        if (!target) {
+        lastEditorTarget = null; // single-use: consume this right-click
+        if (!target || !target.isConnected) {
           console.warn(`${LOG} no editor target under the cursor`);
           return;
         }
@@ -428,10 +501,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
         revealLineInPreview(host, source, line);
       }
     });
+    // Rank 12 seats this directly under core's "Show Markdown Preview" (rank
+    // 11) instead of above Undo/Redo/Cut/Copy/Paste, which run 1-6.
     app.contextMenu.addItem({
       command: CMD_REVEAL_IN,
       selector: EDITOR_SELECTOR,
-      rank: 0
+      rank: 12
     });
   }
 };

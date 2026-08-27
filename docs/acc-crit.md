@@ -1,74 +1,113 @@
 # Acceptance Criteria - Edit Markdown at Content
 
-This document defines the acceptance criteria for the core capability of
-`jupyterlab_edit_markdown_at_content_extension`: moving between the rendered Markdown Preview and
-the text editor while preserving your position in the document, in both directions.
+`jupyterlab_edit_markdown_at_content_extension` moves the user between the rendered Markdown Preview
+and the text editor without losing their place, in both directions, and keeps the two panes on the
+same location once they are paired. All mapping is computed in the browser from the source text the
+open document already holds, so no server round-trip is involved.
 
-## Overview
+## Preview to Editor `PTOE`
 
-A reader scrolling the Markdown Preview can jump straight into the editor at the source line that
-produced the content under the cursor, and an author editing the source can reveal that same spot in
-the preview. The mapping between rendered content and source line is computed entirely in the browser
-from the source text already held by the open document, so no server round-trip is involved.
+- [x] `ACC-PTOE-1` **Entry point is core's command** - the extension registers no edit menu item of its own; it repositions after JupyterLab core's `markdownviewer:edit` ("Show Markdown Editor") runs
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata edit-at-content flows green
+- [x] `ACC-PTOE-2` **Editor opens split-right** - the file opens with the `Editor` factory in a split-right pane, revealing the existing editor tab if one is already open
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata edit-at-content flows green
+- [x] `ACC-PTOE-3` **Cursor on the mapped line** - the editor cursor is placed on the source line that produced the right-clicked rendered element
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata edit-at-content flows green
+- [x] `ACC-PTOE-4` **Mapped line top-aligned** - the mapped line is scrolled to the top of the editor viewport, not merely into view
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata edit-at-content flows green
+- [x] `ACC-PTOE-5` **Correct block on well-formed input** - for markdown with no duplicate adjacent text the cursor lands within the line range of the clicked block
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata edit-at-content flows green
+- [x] `ACC-PTOE-6` **Edge: unmappable content** - content with no source counterpart is a no-op with a console warning and no error dialog
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata edit-at-content flows green
+- [x] `ACC-PTOE-7` **Edge: right-click on empty space** - a click landing between or beside blocks resolves to the block nearest by vertical distance
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata edit-at-content flows green
+- [x] `ACC-PTOE-8` **Edge: command fired with no preceding right-click** - invocation from the palette or a keyboard shortcut leaves core's behaviour untouched and performs no repositioning
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata edit-at-content flows green
+- [x] `ACC-PTOE-9` **Edge: stale preview** - a right-click in a preview that is not the current widget performs no repositioning
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata edit-at-content flows green
 
-## Scope and decisions
+## Editor to Preview `ETOP`
 
-- **Mapping granularity**: line-precise, best-effort - aim for the exact source block (paragraph,
-  heading, list item, code fence) under the click, with documented degradation on ambiguous input
-- **Trigger**: context menu on rendered content (right-click) - precise click target drives the mapping
-- **Architecture**: frontend-only - the boilerplate Python server extension is removed
-- **Direction**: both - Preview → Editor and Editor → Preview
+- [x] `ACC-ETOP-10` **Reveal menu item** - right-clicking inside the markdown editor shows "Reveal in Markdown Preview"
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata editor-to-preview flow green
+- [x] `ACC-ETOP-11` **Scrolls an open preview** - selecting it scrolls an open preview of the same file to the block corresponding to the cursor line
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata editor-to-preview flow green
+- [x] `ACC-ETOP-12` **Opens a preview when none is open** - with no preview open the command opens one with the `Markdown Preview` factory and then scrolls to the block
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata editor-to-preview flow green
+- [x] `ACC-ETOP-13` **Heading anchor fallback** - the nearest preceding heading anchor is the alignment target when an exact block match is unavailable
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata editor-to-preview flow green
 
-## Functional criteria - Preview to Editor
+## Scroll Sync `SYNC`
 
-1. Right-clicking inside the rendered Markdown Preview shows a "Show Markdown Editor" item that
-   replaces JupyterLab core's identically named command (core's always opens at line 0); it is
-   absent from the context menu of any non-markdown-preview surface
-2. Selecting the item opens the same file with the `Editor` factory split-right, matching core
-   (revealing the existing editor tab if one is already open, otherwise opening a new split)
-3. The editor cursor is placed on the source line that produced the clicked element, and that line is
-   scrolled into view
-4. For well-formed markdown with no duplicate adjacent text, the cursor lands on the correct source
-   block; "correct" means within the line range of that block
-5. The command is a no-op with a console warning (no error dialog) when invoked on content that cannot
-   be mapped (for example, generated decoration not present in source)
+- [x] `ACC-SYNC-14` **Pairing happens on the preview flow only** - the two panes are wired together when the editor is opened through "Show Markdown Editor" from the preview, not when they are opened independently
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata focused-pane sync tests green
+- [x] `ACC-SYNC-15` **trackEditor setting gates pairing** - the boolean setting `trackEditor` defaults to true; set false, no pairing is wired and neither pane moves the other
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata focused-pane sync tests green
+- [x] `ACC-SYNC-16` **Focused pane drives** - the pane that last received pointerdown, wheel or focusin is the sole driver; the other follows
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata focused-pane sync tests green
+- [x] `ACC-SYNC-17` **Editor scroll drives the preview** - scrolling the focused editor reveals the preview block produced by the editor's top visible line
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata focused-pane sync tests green
+- [x] `ACC-SYNC-18` **Preview scroll drives the editor** - scrolling the focused preview top-aligns the editor on the source line of the preview's top visible block
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata focused-pane sync tests green
+- [x] `ACC-SYNC-19` **Non-driver pane does not drive** - a programmatic scroll of the follower never moves the driver back
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata focused-pane sync tests green
+- [x] `ACC-SYNC-20` **Edits hold the preview location** - typing, adding or deleting text in the editor leaves the preview showing the block being edited; the preview does not jump to the top or to a stale offset
+  - related: DEF-SYNC-1 - the reported desync this criterion closes
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met: Galata 'editing the source holds the preview on the edited block' passes; preview stays on Heading 15 through an edit
+- [x] `ACC-SYNC-21` **Re-render recomputes the mapping** - after the preview re-renders following an edit, the next reveal uses a block map built from the current source, not the pre-edit one
+  - related: DEF-SYNC-1 - the reported desync this criterion closes
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met: buildBlockMap is rebuilt from the post-edit source on each rendered signal; front-matter and memoization unit tests cover the recompute
+- [x] `ACC-SYNC-22` **Edge: pane disposed** - closing either pane removes both panes' listeners and raises no console error
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; Galata focused-pane sync tests green
 
-## Functional criteria - Editor to Preview
+## Non-functional `NFR`
 
-6. Right-clicking inside the markdown editor shows a "Reveal in Markdown Preview" item; selecting it
-   scrolls an open preview of the same file to the rendered block corresponding to the cursor line
-7. If no preview of the file is open, the command opens one with the `Markdown Preview` factory and
-   then scrolls to the corresponding block
-8. The revealed block is brought into the viewport; heading anchors are used as the alignment target
-   when an exact block match is unavailable
+- [x] `ACC-NFR-23` **Activation message** - the extension logs exactly `JupyterLab extension jupyterlab_edit_markdown_at_content_extension is activated!` on activation
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; asserted by the activation Galata test
+- [x] `ACC-NFR-24` **No file type registration** - no `docRegistry.addFileType()` call, so the extension does not compete with icon extensions
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; no addFileType call in src
+- [ ] `ACC-NFR-25` **Mapping cost** - mapping a document under about 2000 lines completes with no perceptible delay on the trigger action
+  - log: 2026-08-27 added
+  - log: 2026-08-27 no measurement taken; criterion is unverified, not met
+- [x] `ACC-NFR-26` **Install is clean** - `make install` succeeds and `jupyter labextension list` reports the extension as OK
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.17; make install clean, labextension list OK
+- [x] `ACC-NFR-27` **No duplicate menu warning** - loading the extension and opening the preview context menu produces no console warning that a `markdownviewer:edit` menu entry is duplicated
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: met in v1.0.15; commandExecuted hook replaced the schema-disabled menu entry, asserted by a Galata console-warning test
 
-## Non-functional criteria
+## Known Limitations `LIMS`
 
-9. The extension activates with the exact console message
-   `JupyterLab extension jupyterlab_edit_markdown_at_content_extension is activated!` (required by the
-   Galata UI test)
-10. No `docRegistry.addFileType()` calls - the extension must not compete with icon extensions
-11. Mapping computation for a typical document (under ~2000 lines) completes without perceptible delay
-    on the trigger action
-12. `make install` succeeds and `jupyter labextension list` reports the extension as `OK`
-
-## Known limitations (accepted)
-
-- Line-precise mapping is best-effort. Accuracy degrades on duplicate adjacent text, deeply nested
-  lists, and raw HTML blocks; in these cases the result falls back to the nearest preceding heading
-- Inline-level precision (a specific word within a paragraph) is out of scope - the unit of mapping is
-  the block
-
-## Out of scope
-
-- Live, continuous cursor-follow synchronisation (jump is explicit, on user action)
-- Bidirectional scroll-linked panes that stay in sync while scrolling
-- Server-side parsing or any server extension endpoint
-- Inline (sub-paragraph) position mapping
-
-## Verification approach
-
-- Jest unit tests cover the source-mapping function against fixture markdown (well-formed, duplicate
-  text, nested lists, code fences) asserting the resolved line for each case
-- Playwright/Galata tests cover the two context-menu flows end to end: right-click preview → editor
-  opens at the expected line, and right-click editor → preview scrolls to the expected block
+- [x] `ACC-LIMS-28` **Block-level precision only** - the unit of mapping is the block; a specific word inside a paragraph is not addressable
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: accepted limitation, decided not open
+- [x] `ACC-LIMS-29` **Degraded mapping is accepted** - accuracy degrades on duplicate adjacent text, deeply nested lists and raw HTML blocks, falling back to the nearest preceding heading
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: accepted limitation, decided not open
+- [x] `ACC-LIMS-30` **Independent panes stay unlinked** - an editor and a preview opened separately are not scroll-synced; pairing requires the preview flow
+  - log: 2026-08-27 added
+  - log: 2026-08-27 closed: accepted limitation, decided not open

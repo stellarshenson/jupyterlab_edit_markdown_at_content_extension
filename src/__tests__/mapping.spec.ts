@@ -77,18 +77,73 @@ describe('mapping - duplicate adjacent paragraphs (position, not content)', () =
   });
 });
 
-describe('mapping - empty/marker-only blocks guard (AC #5)', () => {
-  it('returns -1 for a horizontal rule block', () => {
+describe('mapping - out-of-range is the only failure (ACC-PTOE-6)', () => {
+  it('maps a horizontal rule to the line its --- sits on', () => {
     const src = 'Text\n\n---\n\nMore\n';
     const { blocks } = buildBlockMap(src);
     const hr = blocks.find(b => b.type === 'hr')!;
     expect(hr).toBeDefined();
-    expect(blockToLine(src, hr.ordinal)).toBe(-1);
+    // A marker-only block still came from a real source line; only an ordinal
+    // outside the block list is a failure.
+    expect(blockToLine(src, hr.ordinal)).toBe(2);
+  });
+
+  it('maps an empty fenced code block to its opening fence', () => {
+    const src = 'Text\n\n```\n```\n\nMore\n';
+    const { blocks } = buildBlockMap(src);
+    const code = blocks.find(b => b.type === 'code')!;
+    expect(code).toBeDefined();
+    expect(blockToLine(src, code.ordinal)).toBe(2);
   });
 
   it('returns -1 for an out-of-range ordinal', () => {
     expect(blockToLine('# Only\n', 999)).toBe(-1);
     expect(blockToLine('# Only\n', -1)).toBe(-1);
+  });
+});
+
+describe('mapping - YAML front matter is stripped like the viewer', () => {
+  // MarkdownViewer renders with hideFrontMatter: true, so the rendered host
+  // has no children for the front matter. Lexing the raw source would count
+  // extra blocks and misalign every ordinal.
+  const src = '---\ntitle: Test\nauthor: me\n---\n\n# Heading\n\npara\n';
+
+  it('counts only the blocks the viewer actually renders', () => {
+    const { blocks } = buildBlockMap(src);
+    expect(blocks.map(b => b.type)).toEqual(['heading', 'paragraph']);
+  });
+
+  it('keeps line numbers pointing into the original source', () => {
+    expect(blockToLine(src, 0)).toBe(5);
+    expect(lineAt(src, 5)).toBe('# Heading');
+    expect(blockToLine(src, 1)).toBe(7);
+    expect(lineAt(src, 7)).toBe('para');
+  });
+
+  it('leaves a document without front matter untouched', () => {
+    const plain = '# Heading\n\npara\n';
+    expect(blockToLine(plain, 0)).toBe(0);
+  });
+
+  it('does not treat a mid-document rule as front matter', () => {
+    const rule = '# Heading\n\n---\n\npara\n';
+    const { blocks } = buildBlockMap(rule);
+    expect(blocks.map(b => b.type)).toEqual(['heading', 'hr', 'paragraph']);
+    expect(blockToLine(rule, 0)).toBe(0);
+  });
+});
+
+describe('mapping - buildBlockMap is memoized on the source string', () => {
+  it('returns the identical map for an unchanged source', () => {
+    const src = '# A\n\npara\n';
+    expect(buildBlockMap(src)).toBe(buildBlockMap(src));
+  });
+
+  it('rebuilds when the source changes', () => {
+    const first = buildBlockMap('# A\n\npara\n');
+    const second = buildBlockMap('# A\n\npara\n\nmore\n');
+    expect(second).not.toBe(first);
+    expect(second.blocks).toHaveLength(3);
   });
 });
 

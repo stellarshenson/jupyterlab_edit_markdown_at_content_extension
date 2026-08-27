@@ -37,6 +37,27 @@ const MD = [
 
 const FILE = 'edit-md-content.md';
 
+// One markdown cell, kernelspec named so opening does not prompt for a kernel.
+const FILE_NOTEBOOK = 'edit-md-content.ipynb';
+const NOTEBOOK = JSON.stringify({
+  cells: [
+    {
+      cell_type: 'markdown',
+      metadata: {},
+      source: ['# Not a preview']
+    }
+  ],
+  metadata: {
+    kernelspec: {
+      display_name: 'Python 3',
+      language: 'python',
+      name: 'python3'
+    }
+  },
+  nbformat: 4,
+  nbformat_minor: 5
+});
+
 async function writeAndOpen(
   page: any,
   factory: 'Markdown Preview' | 'Editor'
@@ -56,6 +77,7 @@ async function writeAndOpen(
 test.describe('edit-at-content flows', () => {
   test.afterEach(async ({ page }) => {
     await page.contents.deleteFile(FILE).catch(() => undefined);
+    await page.contents.deleteFile(FILE_NOTEBOOK).catch(() => undefined);
   });
 
   test('Flow 1: Preview -> Editor lands the cursor on the clicked block', async ({
@@ -73,10 +95,10 @@ test.describe('edit-at-content flows', () => {
       .locator('.lm-Menu-itemLabel:has-text("Show Markdown Editor")')
       .click();
 
-    // AC #2: the editor opens.
+    // ACC-PTOE-2: the editor opens.
     await page.locator('.jp-FileEditor').waitFor({ timeout: 30000 });
 
-    // AC #3: the cursor lands on the clicked block's source line (line 6,
+    // ACC-PTOE-3: the cursor lands on the clicked block's source line (line 6,
     // 0-based: "Final paragraph here."). Read it from the editor API rather
     // than a focus-dependent DOM class.
     await expect
@@ -123,9 +145,19 @@ test.describe('edit-at-content flows', () => {
     page
   }) => {
     await page.goto();
-    await page.notebook.createNew();
-    await page.notebook.setCell(0, 'markdown', '# Not a preview');
-    await page.notebook.runCell(0);
+    // Written and opened rather than built with page.notebook.createNew():
+    // that helper always waits for the kernel-selection dialog, which never
+    // appears where `autoStartDefaultKernel` is true (a prefix-level
+    // overrides.json can set it, and JUPYTER_CONFIG_DIR does not mask that).
+    // A markdown cell in a saved notebook opens already rendered, so this
+    // needs neither a dialog nor a running kernel.
+    await page.contents.uploadContent(NOTEBOOK, 'text', FILE_NOTEBOOK);
+    await page.evaluate(async (path: string) => {
+      await (window as any).jupyterapp.commands.execute('docmanager:open', {
+        path,
+        factory: 'Notebook'
+      });
+    }, FILE_NOTEBOOK);
 
     const rendered = page.locator(
       '.jp-MarkdownCell .jp-RenderedMarkdown:has-text("Not a preview")'
@@ -133,9 +165,13 @@ test.describe('edit-at-content flows', () => {
     await rendered.waitFor();
     await rendered.click({ button: 'right' });
 
+    // toBeHidden, not toHaveCount(0): Lumino renders every context-menu item
+    // it was given and marks the ones whose command reports isVisible false
+    // with `lm-mod-hidden`, so core's entry is in the DOM either way. What
+    // must hold is that it is not offered.
     await expect(
       page.locator('.lm-Menu-itemLabel:has-text("Show Markdown Editor")')
-    ).toHaveCount(0);
+    ).toBeHidden();
     await page.keyboard.press('Escape');
   });
 
@@ -455,5 +491,135 @@ test.describe('override and synced scrolling', () => {
       );
     });
     expect(editorScrollTopAfter).toBe(editorScrollTop);
+  });
+});
+
+// A front-mattered document. MarkdownViewer renders with hideFrontMatter:true,
+// so the rendered host has NO child for the front matter - lexing the raw
+// source would count four extra blocks and shift every ordinal.
+// Lines: 0 ---, 1 title, 2 author, 3 ---, 4 blank, 5 ## Alpha, 6 blank,
+// 7 Body alpha., 8 blank, 9 ## Beta, 10 blank, 11 Body beta.
+const MD_FRONT = [
+  '---', // 0
+  'title: Test', // 1
+  'author: me', // 2
+  '---', // 3
+  '', // 4
+  '## Alpha', // 5
+  '', // 6
+  'Body alpha.', // 7
+  '', // 8
+  '## Beta', // 9
+  '', // 10
+  'Body beta.' // 11
+].join('\n');
+
+const FILE_FRONT = 'edit-md-content-front.md';
+
+// One `html` token, two rendered children - the source-vs-rendered divergence
+// that makes a DOM ordinal meaningless.
+const MD_DIVERGENT = [
+  '# Divergent', // 0
+  '', // 1
+  '<div>alpha</div>', // 2
+  '<div>beta</div>', // 3
+  '', // 4
+  'Trailing paragraph.' // 5
+].join('\n');
+
+const FILE_DIVERGENT = 'edit-md-content-divergent.md';
+
+/** 0-based cursor line of the shell's current widget, or -1. */
+function currentCursorLine(): number {
+  const w = (window as any).jupyterapp.shell.currentWidget;
+  const ed = w && w.content && w.content.editor;
+  return ed && ed.getCursorPosition ? ed.getCursorPosition().line : -1;
+}
+
+test.describe('edit-time sync and mapping fidelity', () => {
+  test.afterEach(async ({ page }) => {
+    await page.contents.deleteFile(FILE_LONG).catch(() => undefined);
+    await page.contents.deleteFile(FILE_FRONT).catch(() => undefined);
+    await page.contents.deleteFile(FILE_DIVERGENT).catch(() => undefined);
+  });
+
+  test('ACC-SYNC-20/21: editing the source holds the preview on the edited block', async ({
+    page
+  }) => {
+    await page.goto();
+    await writeAndOpenContent(page, MD_LONG, FILE_LONG, 'Markdown Preview');
+    await showEditorFor(
+      page,
+      '.jp-MarkdownViewer .jp-RenderedMarkdown h2:has-text("Heading 15")'
+    );
+
+    // Wait for the reposition to land before typing - showEditorFor returns at
+    // widget attach, while the extension repositions after `revealed`.
+    await expect
+      .poll(async () => page.evaluate(previewTopBlockText), { timeout: 15000 })
+      .toBe('Heading 15');
+
+    // Type at the caret, which sits on the "## Heading 15" line. The viewer
+    // re-renders on its own debounce and replaces every child of the rendered
+    // host; before the fix nothing re-aligned the preview afterwards and it
+    // jumped away. The preview must still be showing the block being edited.
+    await page.keyboard.press('End');
+    await page.keyboard.type(' EDITED');
+
+    await expect
+      .poll(async () => page.evaluate(previewTopBlockText), { timeout: 20000 })
+      .toBe('Heading 15 EDITED');
+  });
+
+  test('ACC-PTOE-6: a source/rendered mismatch warns and leaves the editor at the top', async ({
+    page
+  }) => {
+    const warnings: string[] = [];
+    page.on('console', message => {
+      if (message.type() === 'warning') {
+        warnings.push(message.text());
+      }
+    });
+
+    await page.goto();
+    await writeAndOpenContent(
+      page,
+      MD_DIVERGENT,
+      FILE_DIVERGENT,
+      'Markdown Preview'
+    );
+
+    // Two <div> children come from ONE html token, so the DOM child count
+    // exceeds the lexed block count and no ordinal can be trusted.
+    await showEditorFor(
+      page,
+      '.jp-MarkdownViewer .jp-RenderedMarkdown div:has-text("beta")'
+    );
+
+    await expect
+      .poll(
+        async () =>
+          warnings.filter(w => w.includes('the source lexes to')).length,
+        { timeout: 15000 }
+      )
+      .toBeGreaterThan(0);
+
+    // Core's plain open stands: line 0, not a confidently wrong line.
+    expect(await page.evaluate(currentCursorLine)).toBe(0);
+  });
+
+  test('front matter: the cursor lands on the clicked heading, not inside the YAML', async ({
+    page
+  }) => {
+    await page.goto();
+    await writeAndOpenContent(page, MD_FRONT, FILE_FRONT, 'Markdown Preview');
+    await showEditorFor(
+      page,
+      '.jp-MarkdownViewer .jp-RenderedMarkdown h2:has-text("Beta")'
+    );
+
+    await expect
+      .poll(async () => page.evaluate(currentCursorLine), { timeout: 15000 })
+      .toBe(9);
   });
 });

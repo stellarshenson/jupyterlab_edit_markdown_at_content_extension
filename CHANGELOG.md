@@ -2,6 +2,23 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.19] - 2026-08-27
+
+### Fixed
+
+- Editing the source no longer throws the preview away from what you are editing. The scroll sync captured the document once when the editor opened, so every reveal after a keystroke used the pre-edit block map; it now refreshes on the viewer's `rendered` signal and re-reveals while the editor is the pane you are driving
+- YAML front matter is stripped before the source is lexed, matching the viewer's own `hideFrontMatter` default. Without it every block after the front matter was off by the number of lines the front matter occupied, so clicking a heading landed the cursor inside the YAML
+- A marker-only block now maps to the line it came from. An `<hr>` came from a real `---` and an empty fence from a real pair of backticks, so both resolve normally; an out-of-range ordinal is the only mapping failure left
+- "Reveal in Markdown Preview" no longer appears in editors for files that are not markdown
+- Integration tests run again: `@jupyterlab/galata` moved to `^5.6.3`. The 5.5 series probes simple mode through a status-bar toggle JupyterLab 4.6 removed, which hangs every `page.goto()` until the test times out
+
+### Changed
+
+- The block map is memoized on the source string, so scroll sync no longer re-lexes an unchanged document on every scroll event
+- README: dropped the claim that this extension replaces JupyterLab core's identically named command - it extends it - and documented that mapping is block-level, so a click inside a list or table lands on the first line of that list or table
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## [1.0.17] - 2026-08-19
 
 ### Fixed
@@ -12,5 +29,3 @@
 
 - Build tooling: synced the project Makefile to the canonical v1.37, which formats the lockfiles with `jlpm prettier` instead of `npx prettier` - the latter fails with `prettier: Permission denied` against a yarn-berry `node_modules`, where `prettier.cjs` ships without the exec bit
 - Build tooling: the Makefile now reads the version through the project-local node and fails loudly when the version cannot be read, instead of silently falling back to `0.0.0` and republishing the current version on a fresh clone
-
-<!-- <END NEW CHANGELOG ENTRY> -->

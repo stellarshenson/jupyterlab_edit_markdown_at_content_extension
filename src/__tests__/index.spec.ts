@@ -13,7 +13,7 @@ function indexSourceNoComments(): string {
   return source.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
-describe('index - registry hygiene (AC #10)', () => {
+describe('index - registry hygiene (ACC-NFR-24)', () => {
   it('does not call docRegistry.addFileType (must not override icons)', () => {
     expect(indexSourceNoComments()).not.toMatch(/addFileType\s*\(/);
   });
@@ -23,7 +23,7 @@ describe('index - registry hygiene (AC #10)', () => {
   });
 });
 
-describe('index - activation message (AC #9)', () => {
+describe('index - activation message (ACC-NFR-23)', () => {
   it('logs the exact activation message the UI test expects', () => {
     expect(indexSourceNoComments()).toContain(
       'JupyterLab extension jupyterlab_edit_markdown_at_content_extension is activated!'

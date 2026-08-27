@@ -134,3 +134,6 @@ dmypy.json
 junit.xml
 ui-tests/test-results/
 ui-tests/playwright-report/
+
+# graphify artefacts
+tmp/
