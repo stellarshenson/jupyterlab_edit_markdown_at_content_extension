@@ -2,13 +2,19 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.21] - 2026-08-27
+
+### Changed
+
+- No source changes. Republished on the first tree whose CI run is fully green, so the registry version corresponds to a verified build: Build #30 passed `build`, `Check Links`, `test_isolated` and `Integration tests`
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## [1.0.20] - 2026-08-27
 
 ### Fixed
 
 - Integration tests collect again. `ui-tests` resolved two copies of `@playwright/test` - the template's `^1.37.0` at 1.60.0 alongside the `^1.60.0` that `@jupyterlab/galata` 5.6.3 pulls at 1.62.1 - so the runner loaded one instance while the spec's `test`, re-exported by galata, came from the other. Playwright reported `test.use() called here` and then found no tests at all. The declared range is now `^1.62.1`, which resolves to a single instance
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## [1.0.19] - 2026-08-27
 
