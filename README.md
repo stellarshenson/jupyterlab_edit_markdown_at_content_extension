@@ -47,4 +47,3 @@ pip uninstall jupyterlab_edit_markdown_at_content_extension
 ## Contributing
 
 If you would like to contribute to this extension, please refer to the [Contributing Guide](CONTRIBUTING.md).
-

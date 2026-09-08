@@ -2,13 +2,26 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.24] - 2026-09-08
+
+### Changed
+
+- Updated to `jupyterlab/extension-template` v4.6.5. The build moves off the `jupyterlab` package and onto `jupyter-builder`: `pyproject.toml` requires `jupyter-builder>=1.2.0,<2`, the labextension scripts call `jupyter-builder`, and `@jupyterlab/builder` is replaced by `@jupyter/builder`
+- ESLint configuration moves from the `eslintConfig` block in `package.json` to a flat `eslint.config.mjs`, adding `@eslint/js`, `@jupyter/eslint-plugin` and `typescript-eslint` as development dependencies
+- `pyproject.toml` declares the licence as the SPDX expression `BSD-3-Clause` with `license-files`, replacing the deprecated licence table and trove classifier
+- `setup.py` is removed, the development install moves from README to a new `CONTRIBUTING.md`, and `RELEASE.md` documents the release environment, the app credentials and npm trusted publishing
+- The build workflow installs the Playwright Chromium shell in a single step. The template's `check_auth.py` step is not carried over, because this extension ships no server extension and loading it as one aborts the check
+- Synced the project Makefile to the canonical 1.38, which asserts a wheel and an sdist exist in `dist/` before the npm push, approves blocked npm install scripts, gates the `build` module and `jlpm` in the dependency check, and runs `npm audit fix --force` after `jlpm up`
+- Upgraded dependencies. The build toolchain is now `@jupyter/builder` 1.2.3 on `@rspack/core` 2.2.3 in place of `@jupyterlab/builder` 4.5.10 on webpack 5.106.0, and the lint toolchain is ESLint 9.39.5 with `typescript-eslint` 8.70.0. JupyterLab 4.6.3, Lumino widgets 2.9.0, TypeScript 5.8.3, Prettier 3.9.6, marked 17.0.6, mermaid 11.17.2, KaTeX 0.16.47 and Yjs 13.6.32 are the resolved versions
+- Refreshed `yarn.lock` and regenerated `package-lock.json`. The downgrades `npm audit fix --force` proposed for the `@jupyterlab` packages were rejected and the 4.6.3 ranges kept
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
 ## [1.0.22] - 2026-08-27
 
 ### Changed
 
 - No functional changes. Republished from the same source tree as 1.0.21
-
-<!-- <END NEW CHANGELOG ENTRY> -->
 
 ## [1.0.21] - 2026-08-27
 
