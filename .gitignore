@@ -137,3 +137,6 @@ ui-tests/playwright-report/
 
 # graphify artefacts
 tmp/
+
+# make publish and build logs
+logs/
