@@ -32,6 +32,8 @@ Jump straight from a rendered markdown file into the editor at the exact line yo
 
 ## Install
 
+To install the extension, execute:
+
 ```bash
 pip install jupyterlab_edit_markdown_at_content_extension
 ```
@@ -41,3 +43,8 @@ pip install jupyterlab_edit_markdown_at_content_extension
 ```bash
 pip uninstall jupyterlab_edit_markdown_at_content_extension
 ```
+
+## Contributing
+
+If you would like to contribute to this extension, please refer to the [Contributing Guide](CONTRIBUTING.md).
+
