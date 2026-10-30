@@ -28,7 +28,7 @@ Jump straight from a rendered markdown file into the editor at the exact line yo
 
 ## Requirements
 
-- JupyterLab >= 4.0.0
+- JupyterLab >= 4.6.0
 
 ## Install
 

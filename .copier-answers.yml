@@ -7,7 +7,7 @@ author_name: Stellars Henson
 has_ai_rules: false
 has_binder: false
 has_settings: false
-kind: frontend-and-server
+kind: frontend
 labextension_name: jupyterlab_edit_markdown_at_content_extension
 project_short_description: Jupyterlab extension to save you the scrolling time from
     when you are at markdown file location and open editor and need to scroll to the
