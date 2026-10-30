@@ -15,7 +15,8 @@ import { EditorView } from '@codemirror/view';
 
 import { buildBlockMap, blockToLine, lineToBlock } from './mapping';
 
-const PLUGIN_ID = 'jupyterlab_edit_markdown_at_content_extension:plugin';
+const PLUGIN_ID =
+  '@stellarshenson/jupyterlab-edit-markdown-at-content-extension:plugin';
 const CORE_EDIT_COMMAND = 'markdownviewer:edit';
 const CMD_REVEAL_IN = 'editmarkdownatcontent:reveal-in-preview';
 
@@ -72,7 +73,7 @@ function revealLineInPreview(
 }
 
 /**
- * Initialization data for the jupyterlab_edit_markdown_at_content_extension extension.
+ * Initialization data for the @stellarshenson/jupyterlab-edit-markdown-at-content-extension extension.
  */
 const plugin: JupyterFrontEndPlugin<void> = {
   id: PLUGIN_ID,
@@ -89,7 +90,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     settingRegistry: ISettingRegistry | null
   ) => {
     console.log(
-      'JupyterLab extension jupyterlab_edit_markdown_at_content_extension is activated!'
+      'JupyterLab extension @stellarshenson/jupyterlab-edit-markdown-at-content-extension is activated!'
     );
 
     // `trackEditor` (default true): keep the editor and preview scrolled
@@ -196,7 +197,13 @@ const plugin: JupyterFrontEndPlugin<void> = {
     const editorTopLine = (editor: any): number => {
       try {
         const view = editor.editor; // CodeMirror EditorView
-        const info = view.lineBlockAtHeight(view.scrollDOM.scrollTop);
+        // Heights exclude the padding; the half line stops the sliver of the line
+        // above, left by scrollIntoView's 5px margin, counting as the top line.
+        const info = view.lineBlockAtHeight(
+          view.scrollDOM.scrollTop -
+            view.documentPadding.top +
+            view.defaultLineHeight / 2
+        );
         return view.state.doc.lineAt(info.from).number - 1;
       } catch {
         return editor.getCursorPosition().line;

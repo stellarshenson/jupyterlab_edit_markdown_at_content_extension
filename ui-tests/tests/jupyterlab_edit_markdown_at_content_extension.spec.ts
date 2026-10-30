@@ -19,7 +19,7 @@ test('should emit an activation console message', async ({ page }) => {
     logs.filter(
       s =>
         s ===
-        'JupyterLab extension jupyterlab_edit_markdown_at_content_extension is activated!'
+        'JupyterLab extension @stellarshenson/jupyterlab-edit-markdown-at-content-extension is activated!'
     )
   ).toHaveLength(1);
 });

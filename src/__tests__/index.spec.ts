@@ -26,7 +26,7 @@ describe('index - registry hygiene (ACC-NFR-24)', () => {
 describe('index - activation message (ACC-NFR-23)', () => {
   it('logs the exact activation message the UI test expects', () => {
     expect(indexSourceNoComments()).toContain(
-      'JupyterLab extension jupyterlab_edit_markdown_at_content_extension is activated!'
+      'JupyterLab extension @stellarshenson/jupyterlab-edit-markdown-at-content-extension is activated!'
     );
   });
 });

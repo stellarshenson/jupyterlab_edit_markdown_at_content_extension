@@ -43,7 +43,7 @@ jobs:
         python -m pip install .
 
         jupyter labextension list
-        jupyter labextension list 2>&1 | grep -ie "jupyterlab_edit_markdown_at_content_extension.*OK"
+        jupyter labextension list 2>&1 | grep -ie "@stellarshenson/jupyterlab-edit-markdown-at-content-extension.*OK"
         python -m jupyterlab.browser_check
 
     - name: Package the extension
@@ -84,7 +84,7 @@ jobs:
         pip install "jupyterlab>=4.6,<5" jupyterlab_edit_markdown_at_content_extension*.whl
 
         jupyter labextension list
-        jupyter labextension list 2>&1 | grep -ie "jupyterlab_edit_markdown_at_content_extension.*OK"
+        jupyter labextension list 2>&1 | grep -ie "@stellarshenson/jupyterlab-edit-markdown-at-content-extension.*OK"
         python -m jupyterlab.browser_check --no-browser-test
 
   integration-tests:

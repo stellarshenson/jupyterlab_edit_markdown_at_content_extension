@@ -8,7 +8,7 @@ has_ai_rules: false
 has_binder: false
 has_settings: false
 kind: frontend
-labextension_name: jupyterlab_edit_markdown_at_content_extension
+labextension_name: '@stellarshenson/jupyterlab-edit-markdown-at-content-extension'
 project_short_description: Jupyterlab extension to save you the scrolling time from
     when you are at markdown file location and open editor and need to scroll to the
     exact place in the file where the content is. This extension opens the editor

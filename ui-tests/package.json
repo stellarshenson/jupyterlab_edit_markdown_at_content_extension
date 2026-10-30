@@ -1,7 +1,7 @@
 {
-  "name": "jupyterlab_edit_markdown_at_content_extension-ui-tests",
+  "name": "@stellarshenson/jupyterlab-edit-markdown-at-content-extension-ui-tests",
   "version": "1.0.0",
-  "description": "JupyterLab jupyterlab_edit_markdown_at_content_extension Integration Tests",
+  "description": "JupyterLab @stellarshenson/jupyterlab-edit-markdown-at-content-extension Integration Tests",
   "private": true,
   "scripts": {
     "start": "jupyter lab --config jupyter_server_test_config.py",
