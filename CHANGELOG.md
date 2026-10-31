@@ -2,6 +2,16 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.29] - 2026-10-31
+
+### Changed
+
+- Apply the template files and packages the upgrade left out
+
+### Fixed
+
+- Keep package-lock.json out of prettier
+
 ## [1.0.27] - 2026-10-30
 
 ### Changed
