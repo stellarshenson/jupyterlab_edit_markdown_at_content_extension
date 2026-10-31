@@ -40,7 +40,7 @@ jobs:
     - name: Build the extension
       run: |
         set -eux
-        python -m pip install .
+        python -m pip install .[test]
 
         jupyter labextension list
         jupyter labextension list 2>&1 | grep -ie "@stellarshenson/jupyterlab-edit-markdown-at-content-extension.*OK"
@@ -82,6 +82,7 @@ jobs:
         sudo rm -rf $(which node)
 
         pip install "jupyterlab>=4.6,<5" jupyterlab_edit_markdown_at_content_extension*.whl
+
 
         jupyter labextension list
         jupyter labextension list 2>&1 | grep -ie "@stellarshenson/jupyterlab-edit-markdown-at-content-extension.*OK"
@@ -159,4 +160,4 @@ jobs:
           python_version: '3.13'
       - uses: jupyterlab/maintainer-tools/.github/actions/check-links@v1
         with:
-          ignore_links: "https://www.npmjs.com/package/.* https://pepy.tech/.* https://static.pepy.tech/.* https://img.shields.io/.* https://www.paypal.com/.*"
+          ignore_links: "https://www.youtube.com/.* https://www.npmjs.com/package/.* https://pepy.tech/.* https://static.pepy.tech/.* https://img.shields.io/.* https://www.paypal.com/.*"
