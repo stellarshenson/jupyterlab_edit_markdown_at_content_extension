@@ -6,6 +6,7 @@ node_modules
 jupyterlab_edit_markdown_at_content_extension
 eslint.config.mjs
 .venv
+package-lock.json
 
 .claude
 
