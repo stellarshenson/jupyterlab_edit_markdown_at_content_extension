@@ -240,11 +240,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
      * guarantees the follower is resolved to the driver's exact line rather
      * than nudged by a relative amount.
      */
+    const synced = new WeakSet<object>();
     const establishSync = (previewWidget: any, editorWidget: any): void => {
-      if (editorWidget.__emacSynced) {
+      if (synced.has(editorWidget)) {
         return;
       }
-      editorWidget.__emacSynced = true;
+      synced.add(editorWidget);
 
       const editor = editorWidget.content.editor;
       // The editor was just focused on open, so it drives first.
@@ -314,7 +315,13 @@ const plugin: JupyterFrontEndPlugin<void> = {
       // Pointer/wheel/focus on a pane (capture phase, before its scroll fires)
       // makes it the driver. Scroll events do not bubble but are seen in
       // capture, so one listener per widget node catches its inner scroller.
-      const claimOpts = { capture: true, passive: true } as const;
+      // One abort removes all eight listeners, so none can be forgotten.
+      const listeners = new AbortController();
+      const claimOpts = {
+        capture: true,
+        passive: true,
+        signal: listeners.signal
+      };
       const ed = editorWidget.node;
       const pv = previewWidget.node;
       ed.addEventListener('pointerdown', claimEditor, claimOpts);
@@ -327,14 +334,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       pv.addEventListener('scroll', onPreviewScroll, claimOpts);
 
       const cleanup = () => {
-        ed.removeEventListener('pointerdown', claimEditor, claimOpts as any);
-        ed.removeEventListener('wheel', claimEditor, claimOpts as any);
-        ed.removeEventListener('focusin', claimEditor, claimOpts as any);
-        pv.removeEventListener('pointerdown', claimPreview, claimOpts as any);
-        pv.removeEventListener('wheel', claimPreview, claimOpts as any);
-        pv.removeEventListener('focusin', claimPreview, claimOpts as any);
-        ed.removeEventListener('scroll', onEditorScroll, claimOpts as any);
-        pv.removeEventListener('scroll', onPreviewScroll, claimOpts as any);
+        listeners.abort();
         previewWidget.content.rendered.disconnect(onPreviewRendered);
         // Disconnect from both signals, not just the one that fired. Closing
         // only the preview leaves this closure - and the detached preview DOM
@@ -343,7 +343,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         // second run of cleanup is harmless.
         editorWidget.disposed.disconnect(cleanup);
         previewWidget.disposed.disconnect(cleanup);
-        editorWidget.__emacSynced = false;
+        synced.delete(editorWidget);
       };
       editorWidget.disposed.connect(cleanup);
       previewWidget.disposed.connect(cleanup);
@@ -397,6 +397,18 @@ const plugin: JupyterFrontEndPlugin<void> = {
       const ordinal = block
         ? Array.from(host.children).indexOf(block)
         : nearestChildOrdinal(host, lastPreviewY);
+      // The clicked list item or table row inside the block; 0 anywhere else.
+      const rows = block
+        ? Array.from(
+            block.tagName === 'TABLE'
+              ? block.querySelectorAll('tr')
+              : block.children
+          )
+        : [];
+      const item = Math.max(
+        0,
+        rows.findIndex(row => row.contains(target))
+      );
       if (ordinal < 0) {
         return;
       }
@@ -416,7 +428,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         );
         return;
       }
-      const line = blockToLine(source, ordinal);
+      const line = blockToLine(source, ordinal, item);
       if (line < 0) {
         console.warn(
           `${LOG} block ${ordinal} is out of range; left the editor at the top`
@@ -424,8 +436,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
         return;
       }
 
-      // Core opened the editor split-right; openOrReveal returns that same
-      // widget (idempotent by path + factory) and reveals it if side-by-side.
+      // `commandExecuted` fires before core's own open settles, so this call
+      // may be the one that creates the editor; core's later openOrReveal then
+      // returns the same widget (idempotent by path + factory).
       const editorWidget: any = docManager.openOrReveal(
         widget.context.path,
         EDITOR_FACTORY,
@@ -500,6 +513,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
         }
         await previewWidget.context.ready;
         await previewWidget.revealed;
+        // `revealed` does not wait for the first render: a preview this command
+        // just opened has an empty host until the viewer's own `ready`.
+        await previewWidget.content.ready;
         const host = renderedHost(previewWidget);
         if (!host) {
           console.warn(`${LOG} rendered preview host not found`);

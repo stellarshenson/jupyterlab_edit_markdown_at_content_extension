@@ -536,11 +536,16 @@ function currentCursorLine(): number {
   return ed && ed.getCursorPosition ? ed.getCursorPosition().line : -1;
 }
 
+// The list is block 1; "third item" is source line 4.
+const MD_LIST = 'intro\n\n- first item\n- second item\n- third item\n';
+const FILE_LIST = 'edit-md-content-list.md';
+
 test.describe('edit-time sync and mapping fidelity', () => {
   test.afterEach(async ({ page }) => {
     await page.contents.deleteFile(FILE_LONG).catch(() => undefined);
     await page.contents.deleteFile(FILE_FRONT).catch(() => undefined);
     await page.contents.deleteFile(FILE_DIVERGENT).catch(() => undefined);
+    await page.contents.deleteFile(FILE_LIST).catch(() => undefined);
   });
 
   test('ACC-SYNC-20/21: editing the source holds the preview on the edited block', async ({
@@ -621,5 +626,47 @@ test.describe('edit-time sync and mapping fidelity', () => {
     await expect
       .poll(async () => page.evaluate(currentCursorLine), { timeout: 15000 })
       .toBe(9);
+  });
+
+  test('DEF-MAP-2: a click on a list item lands on that item, not the list start', async ({
+    page
+  }) => {
+    await page.goto();
+    await writeAndOpenContent(page, MD_LIST, FILE_LIST, 'Markdown Preview');
+    await showEditorFor(
+      page,
+      '.jp-MarkdownViewer .jp-RenderedMarkdown li:has-text("third item")'
+    );
+
+    await expect
+      .poll(async () => page.evaluate(currentCursorLine), { timeout: 15000 })
+      .toBe(4);
+  });
+
+  test('ACC-ETOP-12: Reveal scrolls a preview it has just opened', async ({
+    page
+  }) => {
+    await page.goto();
+    await writeAndOpenContent(page, MD_LONG, FILE_LONG, 'Editor');
+    await page.locator('.jp-FileEditor .cm-content').waitFor();
+    // "## Heading 15" is source line 56; no preview is open yet.
+    await page.evaluate(() => {
+      (
+        window as any
+      ).jupyterapp.shell.currentWidget.content.editor.setCursorPosition({
+        line: 56,
+        column: 0
+      });
+    });
+    await page.locator('.jp-FileEditor').click({ button: 'right' });
+    await page
+      .locator('.lm-Menu-itemLabel:has-text("Reveal in Markdown Preview")')
+      .click();
+
+    await expect(
+      page.locator(
+        '.jp-MarkdownViewer .jp-RenderedMarkdown h2:has-text("Heading 15")'
+      )
+    ).toBeInViewport({ timeout: 15000 });
   });
 });

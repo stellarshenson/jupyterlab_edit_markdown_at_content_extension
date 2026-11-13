@@ -27,13 +27,13 @@ export interface IBlockDescriptor {
   type: string;
   /** Present only for heading tokens: createHeaderId form of the heading text. */
   headingSlug?: string;
+  /** Lists and tables only: line offset from `startLine` of each item or row. */
+  itemLines?: number[];
 }
 
 export interface IBlockMap {
   /** Rendered (non-space/def/comment) tokens, in DOM order. */
   blocks: IBlockDescriptor[];
-  /** Heading blocks, for the nearest-preceding-heading fallback. */
-  headings: { line: number; slug: string; ordinal: number }[];
 }
 
 /** marked token types that are NOT rendered as a top-level DOM child. */
@@ -103,11 +103,11 @@ export function buildBlockMap(source: string): IBlockMap {
     type: string;
     raw: string;
     text?: string;
-    depth?: number;
+    items?: { raw: string }[];
+    rows?: unknown[];
   }>;
 
   const blocks: IBlockDescriptor[] = [];
-  const headings: { line: number; slug: string; ordinal: number }[] = [];
 
   let currentLine = lineOffset;
   for (const token of tokens) {
@@ -129,17 +129,23 @@ export function buildBlockMap(source: string): IBlockMap {
 
     if (token.type === 'heading') {
       descriptor.headingSlug = headingSlug(token.text ?? '');
-      headings.push({
-        line: startLine,
-        slug: descriptor.headingSlug,
-        ordinal
+    } else if (token.type === 'list' && token.items) {
+      // An item's raw text carries its own line breaks, nested items included.
+      let offset = 0;
+      descriptor.itemLines = token.items.map(item => {
+        const at = offset;
+        offset += item.raw.split('\n').length - 1;
+        return at;
       });
+    } else if (token.type === 'table' && token.rows) {
+      // Header row, then the delimiter line, then one line per body row.
+      descriptor.itemLines = [0, ...token.rows.map((_, i) => i + 2)];
     }
 
     blocks.push(descriptor);
   }
 
-  const map: IBlockMap = { blocks, headings };
+  const map: IBlockMap = { blocks };
   cachedSource = source;
   cachedMap = map;
   return map;
@@ -152,13 +158,17 @@ export function buildBlockMap(source: string): IBlockMap {
  * A block with no text still has a source line: an `<hr>` came from a real
  * `---`, and an empty fence from a real ``` pair. Only an ordinal outside the
  * block list is a failure, so -1 means exactly one thing (ACC-PTOE-6).
+ *
+ * `item` is the 0-based list item or table row inside the block; any other
+ * block, or an item index out of range, resolves to the block's first line.
  */
-export function blockToLine(source: string, ordinal: number): number {
+export function blockToLine(source: string, ordinal: number, item = 0): number {
   const { blocks } = buildBlockMap(source);
   if (ordinal < 0 || ordinal >= blocks.length) {
     return -1;
   }
-  return blocks[ordinal].startLine;
+  const block = blocks[ordinal];
+  return block.startLine + (block.itemLines?.[item] ?? 0);
 }
 
 /**

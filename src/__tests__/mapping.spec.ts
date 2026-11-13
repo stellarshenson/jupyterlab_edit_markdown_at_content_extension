@@ -175,3 +175,50 @@ describe('mapping - headingSlug', () => {
     expect(headingSlug('A **bold** title')).toBe('A-bold-title');
   });
 });
+
+describe('mapping - list items and table rows (DEF-MAP-2)', () => {
+  const src = [
+    'intro', // 0
+    '', // 1
+    '- a', // 2
+    '- b', // 3
+    '  more b', // 4
+    '  - nested', // 5
+    '- c', // 6
+    '', // 7
+    '| H | I |', // 8
+    '|---|---|', // 9
+    '| 1 | 2 |', // 10
+    '| 3 | 4 |' // 11
+  ].join('\n');
+
+  it('lands on the clicked list item, counting multi-line and nested items', () => {
+    expect(blockToLine(src, 1, 0)).toBe(2);
+    expect(blockToLine(src, 1, 1)).toBe(3);
+    expect(blockToLine(src, 1, 2)).toBe(6);
+  });
+
+  it('lands on the clicked table row, skipping the delimiter line', () => {
+    expect(blockToLine(src, 2, 0)).toBe(8);
+    expect(blockToLine(src, 2, 1)).toBe(10);
+    expect(blockToLine(src, 2, 2)).toBe(11);
+  });
+
+  it('falls back to the first line for a plain block or an unknown item', () => {
+    expect(blockToLine(src, 0, 3)).toBe(0);
+    expect(blockToLine(src, 1, 99)).toBe(2);
+  });
+});
+
+describe('mapping - cost (ACC-NFR-25)', () => {
+  it('maps a 2000-line document well inside one interaction', () => {
+    const big = Array.from(
+      { length: 500 },
+      (_, i) => `## H ${i}\n\nBody *x* [l](u) ${i}\n`
+    ).join('\n');
+    const t0 = Date.now();
+    expect(buildBlockMap(big).blocks).toHaveLength(1000);
+    // Measured at about 15 ms; the bound leaves room for a loaded CI runner.
+    expect(Date.now() - t0).toBeLessThan(500);
+  });
+});
