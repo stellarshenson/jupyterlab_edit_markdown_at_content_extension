@@ -175,12 +175,18 @@ export function blockToLine(source: string, ordinal: number, item = 0): number {
  * Editor -> Preview. Returns the DOM ordinal of the block containing `line`
  * (the last block whose startLine <= line), plus the nearest-preceding
  * heading slug and its 1-based occurrence index for the fallback.
- * `ordinal` is -1 when no block precedes the line.
+ * `ordinal` is -1 when no block precedes the line. `item` is the 0-based list
+ * item or table row holding the line; 0 for any other block.
  */
 export function lineToBlock(
   source: string,
   line: number
-): { ordinal: number; headingSlug?: string; headingNth?: number } {
+): {
+  ordinal: number;
+  item: number;
+  headingSlug?: string;
+  headingNth?: number;
+} {
   const { blocks } = buildBlockMap(source);
 
   let ordinal = -1;
@@ -191,6 +197,14 @@ export function lineToBlock(
       break;
     }
   }
+  // Last item or row starting at or before the line; itemLines is ascending.
+  const selected = blocks[ordinal];
+  let item = 0;
+  (selected?.itemLines ?? []).forEach((at, i) => {
+    if (at <= line - selected.startLine) {
+      item = i;
+    }
+  });
 
   // Nearest preceding heading + its occurrence index among same-slug headings.
   let headingSlugValue: string | undefined;
@@ -210,5 +224,5 @@ export function lineToBlock(
     }
   }
 
-  return { ordinal, headingSlug: headingSlugValue, headingNth };
+  return { ordinal, item, headingSlug: headingSlugValue, headingNth };
 }

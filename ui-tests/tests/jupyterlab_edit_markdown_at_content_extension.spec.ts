@@ -641,6 +641,12 @@ test.describe('edit-time sync and mapping fidelity', () => {
     await expect
       .poll(async () => page.evaluate(currentCursorLine), { timeout: 15000 })
       .toBe(4);
+    // The preview follows the editor to the item, not back to the list start.
+    await expect(
+      page.locator(
+        '.jp-MarkdownViewer .jp-RenderedMarkdown li:has-text("third item")'
+      )
+    ).toBeInViewport();
   });
 
   test('ACC-ETOP-12: Reveal scrolls a preview it has just opened', async ({

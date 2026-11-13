@@ -208,6 +208,15 @@ describe('mapping - list items and table rows (DEF-MAP-2)', () => {
     expect(blockToLine(src, 0, 3)).toBe(0);
     expect(blockToLine(src, 1, 99)).toBe(2);
   });
+
+  it('returns the list item or table row holding an editor line', () => {
+    expect(lineToBlock(src, 0).item).toBe(0);
+    expect(lineToBlock(src, 2).item).toBe(0);
+    expect(lineToBlock(src, 5).item).toBe(1); // nested line -> its top-level item
+    expect(lineToBlock(src, 6).item).toBe(2);
+    expect(lineToBlock(src, 9).item).toBe(0); // delimiter line -> header row
+    expect(lineToBlock(src, 11)).toMatchObject({ ordinal: 2, item: 2 });
+  });
 });
 
 describe('mapping - cost (ACC-NFR-25)', () => {

@@ -27,6 +27,20 @@ Scroll sync between the preview and the editor it opened
   - log: 2026-08-27T00:00:00Z @kj fix applied: establishSync keeps a renderedSource snapshot and connects previewWidget.content.rendered, re-revealing the preview at the editor's top line after each re-render; buildBlockMap strips front matter with core's own regex and re-adds the line offset; buildBlockMap memoized on the source string so a scroll burst lexes once per render, not once per event; cleanup now disconnects the rendered signal and both disposed connections
   - log: 2026-08-27T00:00:00Z @kj verification so far: jest 21/21 (was 14/14, 7 new), eslint 0, tsc 0; three new Galata cases written; awaiting a Galata run to close
   - log: 2026-08-27T00:00:00Z @kj closed: fixed: MarkdownViewer.rendered now refreshes the cached source and re-reveals while the editor drives; verified by Galata ACC-SYNC-20/21 (13/13 green)
+- [x] `DEF-SYNC-12-ITEM-REVEAL` **the preview follows the editor to the list start, not the item** - MEDIUM; Show Markdown Editor on an item deep in a long list puts the caret on the item, then the scroll sync scrolls the preview back to the first line of the list, so the clicked item leaves the preview; src/mapping.ts lineToBlock, src/index.ts revealLineInPreview
+  - evidence: lineToBlock returns the item, revealLineInPreview scrolls that row; Jest 'returns the list item or table row holding an editor line' and Galata 'DEF-MAP-2' viewport assertion pass; build_test 2026-11-13 at 1.0.32: Jest 26, Galata 15 green
+  - repro: right-click item 40 of a 60-item list in the preview, Show Markdown Editor; the preview scrolls to the list start
+  - test-tags: UNIT, E2E
+  - root-cause: 2026-11-13T07:28:17Z @kj lineToBlock returned only the block ordinal, so revealLineInPreview scrolled the whole list or table element to the top
+  - log: 2026-11-13T07:28:17Z @kj added
+  - log: 2026-11-13T07:30:21Z @kj closed
+- [x] `DEF-SYNC-13-KEY-DRIVER` **typing does not make the editor the scroll driver** - MEDIUM; after a wheel scroll over the preview with focus still in the editor, typing leaves the preview as the driver, so the re-render after the edit is not followed by a re-reveal and the preview loses its position; src/index.ts establishSync
+  - evidence: keydown on the editor node calls claimEditor, removed by the same AbortController; no test of its own, Galata 'ACC-SYNC-20/21' still passes; build_test 2026-11-13 at 1.0.32: Jest 26, Galata 15 green
+  - repro: open the editor from the preview, wheel-scroll the preview without clicking it, type in the editor
+  - test-tags: E2E
+  - root-cause: 2026-11-13T07:28:17Z @kj the editor claimed the driver on pointerdown, wheel and focusin only; focus never left the editor, so no focusin fired and onPreviewRendered returned early
+  - log: 2026-11-13T07:28:17Z @kj added
+  - log: 2026-11-13T07:30:21Z @kj closed
 
 ## Source Mapping `MAP`
 

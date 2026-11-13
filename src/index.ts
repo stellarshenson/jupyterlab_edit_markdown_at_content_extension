@@ -38,11 +38,21 @@ function revealLineInPreview(
   source: string,
   line: number
 ): void {
-  const { ordinal, headingSlug: slug, headingNth } = lineToBlock(source, line);
+  const {
+    ordinal,
+    item,
+    headingSlug: slug,
+    headingNth
+  } = lineToBlock(source, line);
   const children = Array.from(host.children);
   const expected = buildBlockMap(source).blocks.length;
   if (children.length === expected && ordinal >= 0) {
-    children[ordinal].scrollIntoView({ block: 'start' });
+    const block = children[ordinal];
+    // Inside a list or table, scroll to the item or row holding the line, so a
+    // line deep in a long list does not pull the preview back to the list start.
+    const rows =
+      block.tagName === 'TABLE' ? block.querySelectorAll('tr') : block.children;
+    ((item > 0 && rows[item]) || block).scrollIntoView({ block: 'start' });
     return;
   }
   if (slug) {
@@ -315,7 +325,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       // Pointer/wheel/focus on a pane (capture phase, before its scroll fires)
       // makes it the driver. Scroll events do not bubble but are seen in
       // capture, so one listener per widget node catches its inner scroller.
-      // One abort removes all eight listeners, so none can be forgotten.
+      // One abort removes all nine listeners, so none can be forgotten.
       const listeners = new AbortController();
       const claimOpts = {
         capture: true,
@@ -327,6 +337,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       ed.addEventListener('pointerdown', claimEditor, claimOpts);
       ed.addEventListener('wheel', claimEditor, claimOpts);
       ed.addEventListener('focusin', claimEditor, claimOpts);
+      ed.addEventListener('keydown', claimEditor, claimOpts);
       pv.addEventListener('pointerdown', claimPreview, claimOpts);
       pv.addEventListener('wheel', claimPreview, claimOpts);
       pv.addEventListener('focusin', claimPreview, claimOpts);
