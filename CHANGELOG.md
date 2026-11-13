@@ -2,6 +2,17 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.0.33] - 2026-11-13
+
+### Changed
+
+- Condense the journal entry of the review round
+
+### Fixed
+
+- Follow the editor to the list item or table row and let typing reclaim the scroll driver
+- Scroll a preview that Reveal just opened and land on the clicked list item or table row
+
 ## [1.0.30] - 2026-10-31
 
 ### Changed
